@@ -1,11 +1,20 @@
-# HotChords Migration Requirements
+# HotChords Requirements
+# Supported Python versions: 3.10, 3.11, 3.12
+
+# Audio Analysis
 librosa>=0.11.0
+soundfile>=0.12.0
 numpy>=2.0.0
 scipy>=1.13.0
+
+# AI Stem Separation (Optional — Demucs falls back gracefully if unavailable)
 torch>=2.0.0
 demucs>=4.0.0
 
-# Backend Refactor
+# FFmpeg (bundled binary — no manual install required)
+imageio-ffmpeg>=0.4.9
+
+# Backend Server
 fastapi>=0.111.0
 uvicorn>=0.30.0
 pydantic>=2.7.0

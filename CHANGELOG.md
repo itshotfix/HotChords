@@ -11,6 +11,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 *This is the first official public open-source release of HotChords on GitHub.* 
 *(Note: Internal development history progressed up to v5.5 prior to this public release).*
 
+## [v0.2.0] — Windows Easy-Setup & Portability
+
+*This release focuses on removing installation friction, particularly for Windows users, and standardizing the startup process.*
+
+- **FFmpeg Integration**: Added `imageio-ffmpeg` to bundle FFmpeg binaries automatically, removing the need for users to manually install and configure FFmpeg in their system PATH.
+- **Enhanced Setup Scripts**: Rewrote `setup_windows.bat` and `setup_mac.sh` with automatic Python version validation (3.10-3.12), virtual environment management, and dependency verification.
+- **Robust Startup**: Updated `start_windows.bat` and `start_mac.sh` for reliable, one-click server launching. 
+- **Preflight Diagnostics**: Added `backend/utils/preflight.py` to easily verify the environment and dependencies.
+- **MP3 Support**: Pinned `soundfile>=0.12.0` to ensure native MP3 support without needing an FFmpeg fallback for common formats.
+- **Documentation**: Completely rewrote the README Installation section into a beginner-friendly Quick Start, and added a comprehensive `docs/TROUBLESHOOTING.md` guide.
+
+---
+
 ### Current State
 
 HotChords is a functional, locally-running piano chord detection workstation. The application can:

@@ -108,7 +108,7 @@ SYNCHRONIZE WITH THE SONG
 
 HotChords is built on a lightweight, dependency-conscious stack:
 
-- **Python (3.9+)**: Backend processing and application entry point.
+- **Python (3.10–3.12)**: Backend processing and application entry point.
 - **FastAPI / Uvicorn**: High-performance asynchronous API for local serving.
 - **Librosa / NumPy / SciPy**: Core DSP, harmonic separation, and feature extraction.
 - **PyTorch / Demucs (Optional)**: Deep-learning based stem separation to isolate instruments.
@@ -147,35 +147,67 @@ Here is HotChords in action during the chord detection and playback phase:
 |:---:|:---:|
 | ![Original Analysis](docs/screenshots/HotChords1.png) | ![Beginner Chart](docs/screenshots/HotChords2.png) |
 
-## Installation
+## Quick Start
 
-### Prerequisites
-- Python 3.9+
-- `ffmpeg` (required for MP3/M4A processing)
+### Windows
 
-```bash
-# macOS
-brew install ffmpeg
+```cmd
+git clone https://github.com/hotfix/hotchords.git
+cd hotchords
 
-# Ubuntu / Debian
-sudo apt install ffmpeg
+scripts\setup_windows.bat
+scripts\start_windows.bat
 ```
 
-### Setup
+The setup script will:
+- Verify your Python version (3.10–3.12 required)
+- Create a virtual environment
+- Install all dependencies (including FFmpeg — no manual install needed)
+- Verify the installation
+
+The start script will launch the server and open HotChords in your default browser.
+
+### macOS
 
 ```bash
 git clone https://github.com/hotfix/hotchords.git
 cd hotchords
 
-python3 -m venv venv
-source venv/bin/activate
+bash scripts/setup_mac.sh
+bash scripts/start_mac.sh
+```
 
-# Install dependencies
+### Manual Developer Setup
+
+If you prefer full control over your environment:
+
+```bash
+# Requires Python 3.10, 3.11, or 3.12
+python3 -m venv venv
+source venv/bin/activate          # macOS/Linux
+# venv\Scripts\activate           # Windows
+
 pip install -r requirements.txt
+python3 hotchords.py
 ```
 
 *(Optional): If you do not want to install PyTorch/Demucs for AI stem separation, install the lightweight requirements instead:*
-`pip install librosa fastapi uvicorn pydantic python-multipart numpy scipy`
+`pip install librosa soundfile fastapi uvicorn pydantic python-multipart numpy scipy imageio-ffmpeg`
+
+### Verify Your Setup
+
+HotChords includes a built-in environment check:
+```bash
+python -m backend.utils.preflight
+```
+
+### Platform Support
+
+| Platform | Status |
+|----------|--------|
+| **macOS** (Intel & Apple Silicon) | ✅ Supported |
+| **Windows** 10/11 | ✅ Supported (scripts prepared, requires validation on Windows hardware) |
+| **Linux** | ⚠️ Not officially tested — likely works but not validated |
 
 ## Running Locally
 
@@ -186,6 +218,7 @@ python3 hotchords.py
 ```
 
 The browser will automatically open to `http://localhost:5500`.
+If port 5500 is occupied, HotChords will automatically use the next available port.
 
 ## Project Structure
 
@@ -206,7 +239,9 @@ HotChords App/
 │       ├── ui/               # SVG generation for piano and hands
 │       └── animations/       # GSAP controllers
 ├── docs/                     # Extended documentation (Pipeline, Fingering)
-└── scripts/, tests/, .github/ # Dev tools
+├── scripts/                  # Setup & start scripts (Windows + macOS)
+├── docs/                     # Documentation & troubleshooting
+└── tests/, .github/          # Dev tools
 ```
 
 ## Accuracy Philosophy

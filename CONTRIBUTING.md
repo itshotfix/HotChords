@@ -14,8 +14,8 @@ HotChords operates on two core principles:
 ## Development Setup
 
 ### Local Environment
-- **Python 3.9+**
-- **ffmpeg** installed on your system (e.g., `brew install ffmpeg` or `sudo apt install ffmpeg`).
+- **Python 3.10, 3.11, or 3.12**
+- **FFmpeg**: Bundled automatically via the `imageio-ffmpeg` package. No manual installation is required for most platforms.
 
 ### Initializing the Project
 

@@ -7,12 +7,33 @@ import time
 import threading
 import webbrowser
 import uvicorn
+import socket
+import urllib.request
+import urllib.error
 
-PORT = 5500
+def get_free_port(start_port=5500):
+    """Find a free port starting from the given port."""
+    for port in range(start_port, start_port + 100):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('127.0.0.1', port)) != 0:
+                return port
+    raise RuntimeError("No free ports available.")
+
+PORT = get_free_port(5500)
 
 def open_browser():
-    time.sleep(0.9)
-    webbrowser.open(f"http://localhost:{PORT}")
+    """Poll the server until it responds, then open the browser."""
+    url = f"http://localhost:{PORT}"
+    max_retries = 20
+    for _ in range(max_retries):
+        try:
+            # Check if the server is responding
+            urllib.request.urlopen(url)
+            webbrowser.open(url)
+            return
+        except urllib.error.URLError:
+            time.sleep(0.5)
+    print(f"\\nFailed to auto-open browser. Please manually navigate to {url}")
 
 if __name__ == '__main__':
     print('\n  HotChords : http://localhost:' + str(PORT))
