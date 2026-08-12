@@ -145,7 +145,7 @@ Here is HotChords in action during the chord detection and playback phase:
 
 | Chord Detection (Original Analysis) | Chord Detection (Beginner Chart) |
 |:---:|:---:|
-| ![Original Analysis](docs/screenshots/original_analysis.png) | ![Beginner Chart](docs/screenshots/beginner_chart.png) |
+| ![Original Analysis](docs/screenshots/HotChords1.png) | ![Beginner Chart](docs/screenshots/HotChords2.png) |
 
 ## Installation
 
