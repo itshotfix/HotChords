@@ -141,9 +141,11 @@ graph TD
 
 ## Screenshots
 
-| App Open | Home Interface |
+Here is HotChords in action during the chord detection and playback phase:
+
+| Chord Detection (Original Analysis) | Chord Detection (Beginner Chart) |
 |:---:|:---:|
-| ![App Open](docs/screenshots/app_open.webp) | ![Home Interface](docs/screenshots/home.png) |
+| ![Original Analysis](docs/screenshots/original_analysis.png) | ![Beginner Chart](docs/screenshots/beginner_chart.png) |
 
 ## Installation
 
