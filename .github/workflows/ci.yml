@@ -1,0 +1,48 @@
+name: Python Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-import:
+    name: Lint & Import Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install core dependencies (without heavy ML packages)
+        # Install only what's needed for import checks and linting.
+        # Demucs/PyTorch are excluded here because they require large model
+        # downloads and GPU resources that are not appropriate for CI.
+        run: |
+          pip install --upgrade pip
+          pip install librosa numpy scipy fastapi uvicorn pydantic python-multipart
+
+      - name: Check that all backend modules import cleanly
+        # This catches broken imports, missing __init__ files, and syntax errors
+        # across the entire backend package without running a full analysis.
+        run: |
+          python -c "import backend.api.router"
+          python -c "import backend.analysis.pipeline"
+          python -c "import backend.analysis.structure"
+          python -c "import backend.theory.theory"
+          python -c "import backend.theory.chords"
+          python -c "import backend.theory.constants"
+          python -c "import backend.theory.analysis_helpers"
+          python -c "import backend.utils.progress"
+          python -c "import backend.utils.state"
+          python -c "import backend.models.responses"
+          echo "All backend modules imported successfully."
+
+      - name: Check entry point syntax
+        run: python -m py_compile hotchords.py && echo "hotchords.py OK"

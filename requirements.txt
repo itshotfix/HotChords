@@ -1,0 +1,12 @@
+# HotChords Migration Requirements
+librosa>=0.11.0
+numpy>=2.0.0
+scipy>=1.13.0
+torch>=2.0.0
+demucs>=4.0.0
+
+# Backend Refactor
+fastapi>=0.111.0
+uvicorn>=0.30.0
+pydantic>=2.7.0
+python-multipart>=0.0.9

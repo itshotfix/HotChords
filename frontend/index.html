@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotChords Workstation</title>
+    <link rel="stylesheet" href="/css/piano.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        .practice-panel {
+            background: var(--card);
+            border-radius: var(--radius-inner);
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-subtle);
+            padding: 10px 16px;
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .panel-row {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+        .panel-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .panel-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 700;
+            letter-spacing: 0.6px;
+        }
+        .toggle-group {
+            display: flex;
+            background: var(--surface-secondary);
+            border-radius: 10px;
+            padding: 3px;
+            border: 1px solid var(--border-light);
+        }
+        .toggle-btn {
+            border: none;
+            background: transparent;
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 7px;
+            transition: all 0.2s;
+        }
+        .toggle-btn.active {
+            background: var(--card);
+            color: var(--text);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+        .easy-key-badge {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--blue);
+            background: rgba(0, 113, 227, 0.08);
+            padding: 4px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 113, 227, 0.15);
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo" onclick="resetApp()">Hot<span>Chords</span></div>
+    <div id="hdr-actions" class="hidden" style="margin-left: auto;">
+        <button onclick="resetApp()" class="btn-primary">New Song</button>
+    </div>
+</header>
+
+<main class="main-view">
+    <!-- UPLOAD SCREEN -->
+    <div id="upload-screen" class="screen active">
+        <div class="modal-box" onclick="document.getElementById('file-input').click()">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:24px; opacity:0.8">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <h2 style="font-size:24px; font-weight:700; margin-bottom:8px; letter-spacing:-0.5px;">Start your session</h2>
+            <p style="color:var(--text-muted); font-size:16px; font-weight:500;">Drop an audio file or click to browse</p>
+            <input type="file" id="file-input" class="hidden" accept=".mp3,.wav,.flac">
+        </div>
+    </div>
+
+    <!-- ANALYSIS SCREEN -->
+    <div id="analysis-screen" class="screen">
+        <div class="modal-box" style="cursor:default;">
+            <h3 id="prog-file-name" style="font-size:20px; font-weight:700; margin-bottom:24px; letter-spacing:-0.5px;">Analyzing audio...</h3>
+            <div class="prog-bar-wrap">
+                <div id="prog-bar" class="prog-bar-fill"></div>
+            </div>
+            <div id="prog-msg" style="font-size:14px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Engine warming up...</div>
+        </div>
+    </div>
+
+    <!-- RESULTS WORKSTATION -->
+    <div id="results-screen" class="screen">
+        <div class="results-content-wrapper">
+            <!-- TOP: Info, Waveform, Playback -->
+            <div class="results-top">
+                <div class="info-strip">
+                    <div class="chip"><span class="lbl">Key</span><span class="val" id="val-key">-</span></div>
+                    <div class="chip"><span class="lbl">BPM</span><span class="val" id="val-bpm">-</span></div>
+                    <div class="chip"><span class="lbl">Time</span><span class="val" id="val-sig">-</span></div>
+                    <div class="chip" style="flex:1; align-items:flex-end;"><span class="lbl">Track</span><span class="val" id="res-file-name" style="color:var(--text-muted); max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">-</span></div>
+                </div>
+
+                <!-- PRACTICE PANEL -->
+                <div class="practice-panel">
+                    <div class="panel-row">
+                        <div class="panel-group">
+                            <span class="panel-label">Practice Mode</span>
+                            <div class="toggle-group">
+                                <button id="btn-mode-orig" class="toggle-btn active" onclick="setPracticeMode('original')">Original Analysis</button>
+                                <button id="btn-mode-beg" class="toggle-btn" onclick="setPracticeMode('beginner')">Beginner Chart</button>
+                            </div>
+                        </div>
+                        <div id="trans-settings" class="panel-group hidden" style="margin-left:auto;">
+                            <div style="display:flex; align-items:center; gap:16px;">
+                                <label class="panel-label" style="display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; margin:0;">
+                                    <input type="checkbox" id="chk-auto-transpose" checked onchange="handleAutoTransposeChange()">
+                                    Auto-Pitch-Shift Playback
+                                </label>
+                                <span id="easy-key-text" class="easy-key-badge">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="waveform-box">
+                    <div class="wf-wrap" onclick="handleWfClick(event)">
+                        <canvas id="wf-canvas"></canvas>
+                        <div id="playhead"></div>
+                    </div>
+                    <div class="playback-bar">
+                        <button class="play-btn" onclick="togglePlay()">
+                            <svg id="play-icon" width="14" height="14" viewBox="0 0 16 16" fill="white"><path d="M5 3l9 5-9 5V3z"/></svg>
+                        </button>
+                        <span id="cur-time" class="time-disp">0:00</span>
+                        <input type="range" id="seek-bar" class="seek-bar" min="0" step="0.1" value="0" oninput="handleSeek(this.value)">
+                        <span id="dur-time" class="time-disp">0:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MIDDLE: Chord Hero V3 (Anchored Hands) -->
+            <div class="chord-hero-section">
+                <!-- Left Hand Guide -->
+                <div id="lh-guide" class="hand-guide-box">
+                    <div id="lh-diagram"></div>
+                    <span class="hand-label">Left Hand</span>
+                </div>
+
+                <!-- Chord Center -->
+                <div class="chord-hero-box">
+                    <div class="chord-hero" id="active-chord">N</div>
+                    <div class="chord-notes-list" id="active-notes-list"></div>
+                </div>
+
+                <!-- Right Hand Guide -->
+                <div id="rh-guide" class="hand-guide-box">
+                    <div id="rh-diagram"></div>
+                    <span class="hand-label">Right Hand</span>
+                </div>
+            </div>
+
+            <!-- TIMELINE -->
+            <div class="timeline-bar">
+                <div class="timeline-scroll" id="timeline"></div>
+            </div>
+        </div>
+
+        <!-- BOTTOM: Fixed Piano Dock -->
+        <div class="piano-dock">
+            <div id="piano-keyboard"></div>
+        </div>
+    </div>
+</main>
+
+<audio id="audio-el"></audio>
+
+<script src="/js/engine/musicTheoryFormatter.js"></script>
+<script src="/js/engine/pianoFingeringEngine.js"></script>
+<script src="/js/animations/handAnimator.js"></script>
+<script src="/js/ui/handDiagrams.js"></script>
+<script src="/js/ui/pianoKeyboard.js"></script>
+<script src="/js/ui/keyboardOverlayManager.js"></script>
+
+<script>
+    'use strict';
+    let DATA = null, audioURL = null, audioBuffer = null, audioSource = null, audioCtx = null;
+    let isPlaying = false, playStartTime = 0, playOffset = 0, rafId = null, activeChordIdx = -1;
+    let piano = null;
+    let currentMode = 'original';
+    let autoPitchShift = true;
+
+    window.onload = () => {
+        piano = new PianoKeyboard('piano-keyboard');
+        document.getElementById('lh-diagram').innerHTML = HandDiagrams.getHandMarkup('LH');
+        document.getElementById('rh-diagram').innerHTML = HandDiagrams.getHandMarkup('RH');
+        document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); togglePlay(); } });
+    };
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('hdr-actions').classList.toggle('hidden', id !== 'results-screen');
+    }
+
+    function resetApp() {
+        if (isPlaying) pauseAudio();
+        if (audioCtx) { try { audioCtx.close(); } catch(e) {} audioCtx = null; }
+        if (audioURL) { URL.revokeObjectURL(audioURL); audioURL = null; }
+        DATA = null; audioBuffer = null; isPlaying = false; playOffset = 0; activeChordIdx = -1;
+        currentMode = 'original';
+        document.getElementById('file-input').value = '';
+        showScreen('upload-screen');
+    }
+
+    const fileInput = document.getElementById('file-input');
+    fileInput.onchange = e => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+
+    function handleFile(file) {
+        resetApp();
+        audioURL = URL.createObjectURL(file);
+        document.getElementById('prog-file-name').textContent = file.name;
+        showScreen('analysis-screen');
+        const fd = new FormData(); fd.append('file', file);
+        const poll = () => {
+            fetch('/progress').then(r => r.json()).then(p => {
+                document.getElementById('prog-bar').style.width = p.pct + '%';
+                document.getElementById('prog-msg').textContent = p.msg;
+            });
+            fetch('/result').then(r => r.json()).then(res => {
+                if (res.ready === false) return;
+                clearInterval(interval);
+                DATA = res; initResults();
+            });
+        };
+        const interval = setInterval(poll, 800);
+        fetch('/analyze', { method: 'POST', body: fd });
+    }
+
+    function initResults() {
+        document.getElementById('val-key').textContent = DATA.key_full;
+        document.getElementById('val-bpm').textContent = Math.round(DATA.tempo);
+        document.getElementById('val-sig').textContent = DATA.time_sig;
+        document.getElementById('res-file-name').textContent = DATA.file;
+        document.getElementById('dur-time').textContent = fmtTime(DATA.duration);
+        document.getElementById('seek-bar').max = DATA.duration;
+        
+        // Update Transposition options and banners
+        const transDiv = document.getElementById('trans-settings');
+        if (DATA.transpose_offset !== 0) {
+            transDiv.classList.remove('hidden');
+            const sign = DATA.transpose_offset > 0 ? '+' : '';
+            document.getElementById('easy-key-text').textContent = `Easy Key: ${DATA.easy_key_full} (${sign}${DATA.transpose_offset})`;
+        } else {
+            transDiv.classList.add('hidden');
+        }
+        
+        // Reset check state and mode
+        document.getElementById('chk-auto-transpose').checked = autoPitchShift;
+        setPracticeMode('original');
+        
+        showScreen('results-screen');
+        setTimeout(() => { renderWaveform(); renderTimeline(); updateUI(0); }, 300);
+        loadAudio();
+    }
+
+    function loadAudio() {
+        fetch(audioURL).then(r => r.arrayBuffer()).then(buf => {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audioCtx.decodeAudioData(buf, decoded => { audioBuffer = decoded; });
+        });
+    }
+
+    function togglePlay() { isPlaying ? pauseAudio() : playAudio(playOffset); }
+    
+    function playAudio(offset) {
+        if (!audioBuffer) return;
+        if (audioSource) { try { audioSource.stop(); } catch(e) {} }
+        audioSource = audioCtx.createBufferSource();
+        audioSource.buffer = audioBuffer; 
+        audioSource.connect(audioCtx.destination);
+        
+        // Apply pitch-shifting in beginner mode if enabled
+        if (currentMode === 'beginner' && autoPitchShift && DATA && DATA.transpose_offset) {
+            audioSource.detune.value = DATA.transpose_offset * 100;
+        } else {
+            audioSource.detune.value = 0;
+        }
+        
+        playOffset = offset; playStartTime = audioCtx.currentTime;
+        audioSource.start(0, offset); isPlaying = true; updatePlayIcon();
+        rafId = requestAnimationFrame(updateFrame);
+    }
+    
+    function pauseAudio() {
+        if (!isPlaying) return;
+        playOffset = getCurrentTime();
+        if (audioSource) { try { audioSource.stop(); } catch(e) {} }
+        isPlaying = false; updatePlayIcon(); cancelAnimationFrame(rafId);
+    }
+    
+    function updatePlaybackDetune() {
+        if (audioSource && audioSource.detune) {
+            if (currentMode === 'beginner' && autoPitchShift && DATA && DATA.transpose_offset) {
+                audioSource.detune.setValueAtTime(DATA.transpose_offset * 100, audioCtx.currentTime);
+            } else {
+                audioSource.detune.setValueAtTime(0, audioCtx.currentTime);
+            }
+        }
+    }
+    
+    function setPracticeMode(mode) {
+        currentMode = mode;
+        activeChordIdx = -1; // Force immediate UI refresh
+        
+        const btnOrig = document.getElementById('btn-mode-orig');
+        const btnBeg = document.getElementById('btn-mode-beg');
+        
+        if (mode === 'beginner') {
+            btnBeg.classList.add('active');
+            btnOrig.classList.remove('active');
+            if (DATA) {
+                document.getElementById('val-key').textContent = DATA.easy_key_full;
+            }
+        } else {
+            btnOrig.classList.add('active');
+            btnBeg.classList.remove('active');
+            if (DATA) {
+                document.getElementById('val-key').textContent = DATA.key_full;
+            }
+        }
+        
+        renderTimeline();
+        updatePlaybackDetune();
+        
+        // Trigger repaint for current playhead
+        const t = getCurrentTime();
+        updateUI(t);
+    }
+    
+    function handleAutoTransposeChange() {
+        autoPitchShift = document.getElementById('chk-auto-transpose').checked;
+        updatePlaybackDetune();
+    }
+    
+    function getCurrentTime() { return isPlaying ? playOffset + (audioCtx.currentTime - playStartTime) : playOffset; }
+    function handleSeek(val) { const t = parseFloat(val); playOffset = t; isPlaying ? playAudio(t) : updateUI(t); }
+    function handleWfClick(e) { const pct = e.offsetX / e.currentTarget.clientWidth; handleSeek(pct * DATA.duration); }
+    
+    function updatePlayIcon() {
+        const pauseIcon = '<rect x="4" y="3" width="3" height="10" rx="1" fill="white"/><rect x="9" y="3" width="3" height="10" rx="1" fill="white"/>';
+        const playIcon = '<path d="M5 3l9 5-9 5V3z" fill="white"/>';
+        document.getElementById('play-icon').innerHTML = isPlaying ? pauseIcon : playIcon;
+    }
+    
+    function updateFrame() { if (!isPlaying) return; const t = getCurrentTime(); if (t >= DATA.duration) { pauseAudio(); playOffset = 0; updateUI(0); return; } updateUI(t); rafId = requestAnimationFrame(updateFrame); }
+
+    function updateUI(t) {
+        document.getElementById('seek-bar').value = t;
+        document.getElementById('cur-time').textContent = fmtTime(t);
+        document.getElementById('playhead').style.left = (t / DATA.duration * 100) + '%';
+        
+        const chords = (currentMode === 'beginner') ? DATA.beginner_chords : DATA.chords;
+        let idx = 0;
+        for (let i = 0; i < chords.length; i++) { if (chords[i].time <= t) idx = i; else break; }
+        
+        if (idx !== activeChordIdx) {
+            activeChordIdx = idx;
+            const c = chords[idx];
+            const name = MusicTheoryFormatter.normalizeChordName(c.chord);
+            document.getElementById('active-chord').textContent = name === 'N' ? '-' : name;
+            const cd = DATA.chord_data[c.chord]; 
+            if (cd) {
+                document.getElementById('active-notes-list').innerHTML = cd.note_names.map(n => `<span>${n}</span>`).join('');
+                piano.setChord(c.chord, cd.notes);
+            } else {
+                document.getElementById('active-notes-list').innerHTML = '';
+                piano.setChord(null, []);
+            }
+            document.querySelectorAll('.tm-item').forEach((el, i) => { el.classList.toggle('active', i === idx); if (i === idx) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); });
+        }
+    }
+
+    function renderWaveform() {
+        const canvas = document.getElementById('wf-canvas');
+        const W = canvas.parentElement.clientWidth, H = canvas.parentElement.clientHeight;
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        const blue = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim();
+        fetch(audioURL).then(r => r.arrayBuffer()).then(buf => {
+            const ac = new AudioContext();
+            ac.decodeAudioData(buf, decoded => {
+                const data = decoded.getChannelData(0);
+                const step = Math.ceil(data.length / W);
+                const amp = H / 2;
+                ctx.beginPath(); ctx.strokeStyle = blue; ctx.lineWidth = 1.5;
+                for (let i = 0; i < W; i++) {
+                    let min = 1, max = -1;
+                    for (let j = 0; j < step; j++) { const v = data[(i * step) + j]; if (v < min) min = v; if (v > max) max = v; }
+                    ctx.moveTo(i, amp + min * amp); ctx.lineTo(i, amp + max * amp);
+                }
+                ctx.stroke(); ac.close();
+            });
+        });
+    }
+
+    function renderTimeline() {
+        const container = document.getElementById('timeline');
+        const chords = (currentMode === 'beginner') ? DATA.beginner_chords : DATA.chords;
+        container.innerHTML = chords.map((c, i) => `
+            <div class="tm-item" onclick="handleSeek(${c.time})">
+                <div class="tm-chord">${MusicTheoryFormatter.normalizeChordName(c.chord)}</div>
+                <div class="tm-time">${fmtTime(c.time)}</div>
+            </div>
+        `).join('');
+    }
+
+    function fmtTime(s) { const m = Math.floor(s / 60), sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}`; }
+</script>
+</body>
+</html>

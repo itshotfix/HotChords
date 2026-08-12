@@ -1,0 +1,262 @@
+/**
+ * piano.css - Apple Premium Design + Piano Teacher V2 Overlay
+ * Refined for Anchored Hand Guides and 3D keyboard visuals.
+ */
+
+:root {
+  --blue: #0071E3;
+  --blue-dark: #0058b0;
+  --bg: #F5F5F7;
+  --card: #FFFFFF;
+  --surface-secondary: #FBFBFD;
+  --text: #1D1D1F;
+  --text-muted: #6E6E73;
+  --border: #D2D2D7;
+  --border-light: #E8E8ED;
+  --piano-white-top: #FFFFFF;
+  --piano-white-bottom: #E8E8ED;
+  --piano-black: #1D1D1F;
+  --piano-active: #0071E3;
+  
+  --shadow-subtle: 0 4px 12px rgba(0,0,0,0.05);
+  --shadow-card: 0 8px 24px rgba(0,0,0,0.08);
+  --radius-card: 20px;
+  --radius-button: 22px;
+  --radius-inner: 12px;
+
+  --piano-height: 280px;
+}
+
+@media (min-width: 1440px) { :root { --piano-height: 320px; } }
+@media (min-width: 1920px) { :root { --piano-height: 380px; } }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden; 
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+header {
+  height: 48px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  flex-shrink: 0;
+  z-index: 1000;
+}
+.logo { font-size: 1.15rem; font-weight: 700; cursor: pointer; letter-spacing: -0.4px; }
+.logo span { color: var(--blue); }
+
+.main-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.screen { display: none; height: 100%; width: 100%; flex-direction: column; overflow: hidden; }
+.screen.active { display: flex; }
+
+/* ═══════════════════════════════════════════
+   WORKSTATION LAYOUT
+   ═══════════════════════════════════════════ */
+
+.results-content-wrapper {
+  height: calc(100vh - 48px - var(--piano-height));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.results-top {
+  padding: 20px 40px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.info-strip { display: flex; gap: 12px; }
+.chip { 
+  background: var(--card); 
+  padding: 8px 16px; 
+  border-radius: var(--radius-inner); 
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-subtle);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.chip .lbl { font-size: 0.6rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.6px; margin-bottom: 2px; }
+.chip .val { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+
+.waveform-box {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  padding: 12px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-subtle);
+  border: 1px solid var(--border-light);
+}
+.wf-wrap { position: relative; flex: 1; cursor: pointer; background: var(--surface-secondary); border-radius: 8px; overflow: hidden; }
+#wf-canvas { width: 100%; height: 100%; }
+#playhead { position: absolute; top:0; left:0; width:2px; height:100%; background: var(--blue); pointer-events:none; z-index: 10; }
+
+.playback-bar { display: flex; align-items: center; gap: 24px; height: 32px; padding: 0 10px; }
+.play-btn {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--blue);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.2s;
+}
+.play-btn:active { transform: scale(0.92); }
+
+.seek-bar { flex: 1; accent-color: var(--blue); cursor: pointer; height: 4px; }
+.time-disp { font-size: 0.75rem; color: var(--text-muted); min-width: 45px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* CHORD HERO V3: Anchored Hands */
+.chord-hero-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 50px;
+  padding: 20px;
+  background: var(--bg);
+}
+
+.hand-guide-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 220px;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+}
+.hand-guide-box.active { opacity: 1; }
+
+.hand-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.chord-hero-box {
+    text-align: center;
+    min-width: 320px;
+}
+.chord-hero {
+  font-size: clamp(3.5rem, 15vh, 10rem);
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: -3px;
+  margin-bottom: 8px;
+}
+.chord-notes-list {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.timeline-bar {
+  height: 60px;
+  flex-shrink: 0;
+  padding: 0 40px 10px;
+}
+.timeline-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; height: 100%; }
+.tm-item { 
+  min-width: 80px; 
+  background: var(--card); 
+  border: 1px solid var(--border-light); 
+  border-radius: 12px; 
+  padding: 6px; 
+  text-align: center; 
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: var(--shadow-subtle);
+  transition: all 0.2s;
+}
+.tm-item.active { background: var(--blue); color: #fff; border-color: var(--blue); box-shadow: 0 4px 12px rgba(0,113,227,0.3); }
+
+/* PIANO DOCK V3 */
+.piano-dock {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  height: var(--piano-height);
+  background: #FFFFFF;
+  border-top: 1px solid var(--border-light);
+  box-shadow: 0 -4px 30px rgba(0,0,0,0.03);
+  z-index: 1000;
+}
+
+#piano-keyboard { width: 100%; height: 100%; }
+
+.key-label {
+    user-select: none;
+    pointer-events: none;
+    text-anchor: middle;
+}
+
+/* MODALS & PROGRESS */
+#upload-screen.active, #analysis-screen.active { align-items: center; justify-content: center; background: var(--bg); }
+.modal-box {
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  padding: 60px 40px;
+  border-radius: 28px;
+  text-align: center;
+  cursor: pointer;
+  width: 440px;
+  box-shadow: var(--shadow-card);
+}
+.prog-bar-wrap { background: var(--border-light); height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 20px; width: 100%; }
+.prog-bar-fill { background: var(--blue); width: 0%; height: 100%; transition: width 0.4s; }
+
+.hidden { display: none !important; }
+::-webkit-scrollbar { height: 6px; width: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+.btn-primary {
+  background: var(--blue);
+  color: #fff;
+  padding: 8px 24px;
+  border-radius: var(--radius-button);
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+.btn-primary:hover { background-color: var(--blue-dark); }
+.btn-primary:active { transform: scale(0.98); }
