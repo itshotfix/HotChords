@@ -19,7 +19,6 @@ import gc
 import tempfile
 import numpy as np
 import librosa
-import torch
 from backend.theory.theory import (
     NOTE_NAMES, NOTE_FLAT, musician_friendly_name,
     chord_note_indices, get_chord_notes_musician, chord_fingers,
@@ -235,6 +234,7 @@ def run_pipeline(filepath, upd_callback=None):
     
     # Optional stem separation via torch/demucs with GPU auto-detection
     try:
+        import torch
         from demucs import pretrained
         from demucs.apply import apply_model
         from demucs.audio import save_audio

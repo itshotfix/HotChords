@@ -1,6 +1,7 @@
 import os, librosa, numpy as np
 from ..theory.constants import NOTE_FLAT
-from ..theory.chords import CHORD_MAT, CHORD_NAMES, chord_note_indices, chord_note_names, chord_fingers, chord_difficulty, simplify_chord
+from ..theory.chords import CHORD_MAT, CHORD_NAMES, chord_note_indices, chord_note_names, chord_difficulty, simplify_chord
+from ..theory.theory import chord_fingers
 from ..theory.analysis_helpers import detect_key_scale, detect_time_sig, _scale_notes, chord_roman
 from ..analysis.structure import detect_structure
 from ..analysis.source_separation import separate_stems
