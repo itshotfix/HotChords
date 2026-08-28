@@ -17,7 +17,7 @@ HotChords is **free, open-source, and runs 100% locally on your computer**. No m
 
 | Operating System | Installer File | Format | Download Link |
 | :--- | :--- | :---: | :---: |
-| **Windows** (64-bit) | `HotChords-v0.3.0-Windows-x64-Setup.exe` | `.exe` | [**Direct Download (.exe)**](https://github.com/itshotfix/HotChords/releases/download/v0.3.0/HotChords-v0.3.0-Windows-x64-Setup.exe) |
+| **Windows** (64-bit) | `HotChords-Win-exe.zip` | `.zip` (Portable `.exe`) | [**Direct Download (.zip)**](https://github.com/itshotfix/HotChords/releases/download/v0.3.0/HotChords-Win-exe.zip) |
 | **macOS** (Apple Silicon — M1/M2/M3/M4) | `HotChords-v0.3.0-macOS-AppleSilicon.dmg` | `.dmg` | [**Direct Download (.dmg)**](https://github.com/itshotfix/HotChords/releases/download/v0.3.0/HotChords-v0.3.0-macOS-AppleSilicon.dmg) |
 | **macOS** (Intel x86_64) | `HotChords-v0.3.0-macOS-Intel.dmg` | `.dmg` | [**Direct Download (.dmg)**](https://github.com/itshotfix/HotChords/releases/download/v0.3.0/HotChords-v0.3.0-macOS-Intel.dmg) |
 
