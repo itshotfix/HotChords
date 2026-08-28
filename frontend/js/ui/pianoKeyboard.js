@@ -46,10 +46,8 @@ class PianoKeyboard {
 
         this.dimensions = { W, H };
         
-        // Ensure hands update even if keyboard isn't ready to draw yet
-        if (window.KeyboardOverlayManager) window.KeyboardOverlayManager.updateHandPositions();
-
         // Proportions: Black key width is 64% of white key width.
+
         // Height is bounded to prevent overly elongated keys on wide screens.
         this.whiteKeyWidth = W / KEYBOARD_61_CONFIG.whiteKeysCount;
         this.blackKeyWidth = this.whiteKeyWidth * 0.64;
@@ -235,34 +233,19 @@ class PianoKeyboard {
                 textEl.textContent = v.finger;
             }
         });
-        
-        if (window.KeyboardOverlayManager) window.KeyboardOverlayManager.updateHandPositions();
     }
 
     setChord(chordName, notes) {
         if (!notes || notes.length === 0) {
             this.voicing = null;
             this.applyVoicingDOM();
-            if (window.HandAnimator) window.HandAnimator.animateChord(null);
             return;
         }
         
         this.voicing = window.PianoFingeringEngine.getChordVoicing(chordName, notes);
         this.applyVoicingDOM();
-        
-        if (this.voicing) {
-            // Apply scale-y key strike pulse animation
-            [...this.voicing.leftHand, ...this.voicing.rightHand].forEach(v => {
-                const el = document.getElementById(`key-${v.midi}`);
-                if (el && window.HandAnimator) window.HandAnimator.pulseKey(el, v.color);
-            });
-            
-            // Trigger hand fingers GSAP animation
-            if (window.HandAnimator) {
-                window.HandAnimator.animateChord(this.voicing);
-            }
-        }
     }
+
 
     getKeyPosition(midiNote) {
         const rect = document.getElementById(`key-${midiNote}`);
