@@ -740,10 +740,68 @@ header.app-header {
 .ws-quick-controls {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   margin-left: auto;
   flex-shrink: 0;
 }
+
+.speed-group {
+  display: flex;
+  align-items: center;
+  background: var(--surface-secondary);
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid var(--border-light);
+  gap: 2px;
+}
+
+.speed-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 9px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.speed-btn.active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+}
+
+.ctrl-btn {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-light);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ctrl-btn:hover {
+  background: var(--surface-tertiary);
+  border-color: var(--border);
+}
+
+.ctrl-btn.danger {
+  color: #E5484D;
+}
+
+.ctrl-btn.btn-sustain-active {
+  background: var(--blue-light);
+  border-color: var(--blue);
+  color: var(--blue);
+  font-weight: 700;
+}
+
 
 /* ── ROW 4: Waveform + Transport ─────────────────────────────────────────── */
 .ws-playback {

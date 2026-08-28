@@ -1,4 +1,8 @@
-# Project Snapshot: HotChords V1 (Current State)
+# Project Snapshot: HotChords V1 (Historical Archive)
+
+> [!NOTE]
+> **Historical Archive**: This document records the original monolithic v1.0 architecture prior to the v0.2/v0.3 modularization and Single Workspace transition. For current system documentation, see [README.md](README.md) and [APP_ARCHITECTURE.md](APP_ARCHITECTURE.md).
+
 
 ## Project Structure
 - `hotchords.py`: The primary entry point and monolithic script containing all backend logic, API handling, and embedded frontend code.

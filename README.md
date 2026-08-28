@@ -1,113 +1,134 @@
 # HotChords
 
-> **"Turn any song into chords you can play."**
+> **Turn any song into chords you can play.**
 
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](CHANGELOG.md)
-[![Status](https://img.shields.io/badge/status-active%20development-orange.svg)](README.md)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
-
----
-
-## Release Status: Version 0.3.0 (Development Milestone)
-
-> [!IMPORTANT]
-> - **Product Status**: Active Development
-> - **UI/UX Status**: In Progress / Continuous Iteration
-> - **Application Development**: **Not Complete**
-> - **Milestone Scope**: Version 0.3 delivers a unified application shell, a transparent audio processing pipeline with honest milestone tracking, stationary timeline column anchors, enlarged interactive learning scale (prominent hands, massive hero chord, docked piano), and synchronized real-song playback.
-> - **Accuracy & Reality**: Chord detection accuracy is under continuous real-song validation; it is not represented as 100% complete. Version 0.3 is an open development foundation, not a finished commercial product.
+[![Release](https://img.shields.io/badge/release-v0.3-blue.svg)](https://github.com/itshotfix/HotChords/releases/tag/v0.3.0)
+[![Status](https://img.shields.io/badge/status-active%20development-orange.svg)](#project-status)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-32%20passed-brightgreen.svg)](tests/)
 
 ---
 
-## What is HotChords?
+## Install HotChords
 
-HotChords is an open-source piano chord detection and interactive learning workstation. When a user uploads an audio track, HotChords answers the core music-learning questions in real time:
+HotChords is **free, open-source, and runs 100% locally on your machine**. No manual installation of Python, Node.js, virtual environments, or AI dependencies is required for general users.
 
-> **"What chord should I play right now, which piano keys do I press, and which fingers do I use?"**
+### Download
+
+* **Windows (64-bit)**: [Download HotChords v0.3 for Windows](https://github.com/itshotfix/HotChords/releases/tag/v0.3.0) *(Installer `.exe`)*
+* **macOS (Apple Silicon — M1/M2/M3/M4)**: [Download HotChords v0.3 for Apple Silicon](https://github.com/itshotfix/HotChords/releases/tag/v0.3.0) *(Disk Image `.dmg`)*
+* **macOS (Intel)**: [Download HotChords v0.3 for Intel Mac](https://github.com/itshotfix/HotChords/releases/tag/v0.3.0) *(Disk Image `.dmg`)*
+
+### Quick Start
+1. **Download & Install** the package for your operating system.
+2. **Launch HotChords** from your Applications / Start Menu.
+3. The application will start locally and open automatically in your default browser at `http://hotchords.localhost:5500` (or `http://localhost:5500`).
 
 ---
 
-## Visual Showcase (v0.3 Walkthrough)
+## What HotChords Does
 
-### 1. Initial Upload Screen
-The upload landing screen provides a structured, responsive entry point with supported format guidance (`MP3`, `WAV`, `M4A`, `FLAC`), drag-and-drop feedback, and keyboard accessibility.
+HotChords turns an uploaded song into an interactive piano chord-learning workstation. It provides clear, real-time answers to the core questions:
 
-![HotChords v0.3 Upload Screen](docs/screenshots/v0.3/01-upload.png)
+> **"What chord should I play right now, which keys do I press, and which fingers should I use?"**
+
+```
+Song Upload
+    ↓
+Audio Analysis & Separation
+    ↓
+Harmonic Chord Detection
+    ↓
+Simplified / Original Mode Toggle
+    ↓
+Previous / Current / Next Chord Timeline
+    ↓
+Left Hand (Bass) + Right Hand (Harmony) Fingering
+    ↓
+Docked 61-Key Piano Visualization
+    ↓
+Synchronized Playback & Transport Controls
+```
+
+---
+
+## Screenshots (v0.3)
+
+### 1. Upload Landing Screen
+Drag and drop any audio file (`MP3`, `WAV`, `M4A`, `FLAC`) or browse to begin.
+
+![Upload Screen](docs/screenshots/v0.3/01-upload.png)
 
 ---
 
 ### 2. Audio Processing & Real Pipeline Milestones
-During audio analysis, HotChords maintains the persistent application shell, displays the uploaded song title, animates subtle waveform activity, and tracks real backend pipeline milestones (source separation, Chroma CQT, beat tracking, Viterbi HMM decoding, and voicing generation).
+Transparently tracks actual DSP stages (demixing, Chroma CQT extraction, beat tracking, Viterbi HMM decoding, and fingering generation) with live progress.
 
-![HotChords v0.3 Processing Screen](docs/screenshots/v0.3/02-analysis.png)
+![Processing Screen](docs/screenshots/v0.3/02-analysis.png)
 
 ---
 
 ### 3. The Single Workspace (Interactive Music Stand)
-Once analysis completes, the user transitions directly into a single, permanent interactive workspace. No tabs, no hidden sub-screens, and no detached windows.
+A permanent, single-screen workspace designed as an immersive music stand.
 
-![HotChords v0.3 Single Workspace](docs/screenshots/v0.3/03-workspace.png)
+![Workspace](docs/screenshots/v0.3/03-workspace.png)
 
 ---
 
-### 4. Simplified vs Original Harmonic Modes
-HotChords offers two distinct chord representations derived from the same audio:
-* **Simplified Mode**: Harmonic reduction collapsing complex extensions, diminished harmonies, and rapid passing chords into beginner-playable triads and power chords.
-* **Original Mode**: Unreduced harmonic progression capturing the song's authentic chord alterations.
+### 4. Simplified vs. Original Harmonic Modes
+Switch dynamically between reduced beginner triads and authentic original chord progressions without losing playback position.
 
 | Simplified Mode | Original Mode |
 | :---: | :---: |
-| ![Simplified Mode](docs/screenshots/v0.3/04-simplified-mode.png) | ![Original Mode](docs/screenshots/v0.3/05-original-mode.png) |
+| ![Simplified Mode](docs/screenshots/v0.3/04-simplified.png) | ![Original Mode](docs/screenshots/v0.3/05-original.png) |
 
 ---
 
-### 5. Hero Current Chord & Fixed Spatial Labels
-The central chord progression features stationary spatial column labels (`PREVIOUS`, `CURRENT CHORD`, `NEXT`) that remain fixed in place while the chords physically animate underneath using GPU-accelerated WAAPI transitions.
+### 5. Hero Current Chord & Stationary Timeline Labels
+Fixed spatial column labels (`PREVIOUS`, `CURRENT CHORD`, `NEXT`) remain stationary while chords physically glide beneath them in real time.
 
-| Live Playback Hero Chord | Physical Chord Transition |
+| Current Chord Hero | Coordinated Chord Transition |
 | :---: | :---: |
-| ![Playback Current Chord](docs/screenshots/v0.3/06-playback-current-chord.png) | ![Chord Transition](docs/screenshots/v0.3/07-chord-transition.png) |
+| ![Current Chord](docs/screenshots/v0.3/06-current-chord.png) | ![Chord Transition](docs/screenshots/v0.3/07-chord-transition.png) |
 
 ---
 
-### 6. Synchronized Hand Guidance & Docked 61-Key Piano
-Left Hand (Bass root + 5th foundation) and Right Hand (Harmony triad) illustrations feature reactive downward finger-press animations and color-coded note chips matching the docked 61-key piano keyboard.
+### 6. Hand & Piano Guidance
+Synchronized Left Hand (bass foundation) and Right Hand (harmony triad) illustrations with downward finger press animations and color-coded note chips matching the 61-key piano keyboard.
 
-![Hands and Piano Guidance](docs/screenshots/v0.3/08-hands-and-piano.png)
-
----
-
-### 7. Responsive Mobile Experience
-The single-workspace music stand naturally reflows across tablet and mobile viewports (1440x900 down to 390x844) without clipping or horizontal overflow.
-
-| Mobile Workspace | Mobile Live Playback |
-| :---: | :---: |
-| ![Mobile Workspace](docs/screenshots/v0.3/09-mobile-workspace.png) | ![Mobile Playback](docs/screenshots/v0.3/10-mobile-playback.png) |
+![Hands and Piano](docs/screenshots/v0.3/08-hands-piano.png)
 
 ---
 
-## System Architecture
+### 7. Responsive Mobile Workspace
+Fluid layout reflows across desktop, tablet, and mobile viewports with zero horizontal clipping.
+
+![Mobile Workspace](docs/screenshots/v0.3/09-mobile.png)
+
+---
+
+## How It Works
 
 ```mermaid
 graph TD
     User --> |Uploads Audio| Web_UI["Single Workspace UI"]
     Web_UI --> |POST /analyze| Audio_Processing
     
-    subgraph Backend ["Python Backend"]
-        Audio_Processing["Audio Loader / Demucs Separation"] --> Harmonic_Rep["Chroma CQT & HPSS Transient Filtering"]
-        Harmonic_Rep --> Chord_Detection["Cosine Similarity & Viterbi HMM Decoder"]
+    subgraph Backend ["Python DSP & Music Theory Engine"]
+        Audio_Processing["Audio Decoder / Demucs Separation"] --> Harmonic_Rep["Chroma CQT & Harmonic Filtering"]
+        Harmonic_Rep --> Chord_Detection["Cosine Template Matching & Viterbi HMM"]
         Chord_Detection --> Theory_Engine["Theory Engine: Voicings & Simplification"]
-        Theory_Engine --> SongTimeline_Model["SongTimeline Canonical Data Contract"]
+        Theory_Engine --> SongTimeline_Model["SongTimeline Canonical Model"]
     end
     
     SongTimeline_Model --> |Returns JSON| Web_UI
     
-    subgraph Frontend ["Synchronized Playback Architecture"]
+    subgraph Frontend ["Synchronized Frontend Architecture"]
         PlaybackClock["PlaybackClock (Single Authoritative Time Source)"]
         PlaybackClock --> CurrentChordEngine["CurrentChordEngine (State Resolution)"]
         CurrentChordEngine --> PianoFingeringEngine["PianoFingeringEngine (Voicings & Hands)"]
         PianoFingeringEngine --> WorkspaceChordTimeline["3-Chord WAAPI Sliding Carousel"]
-        PianoFingeringEngine --> WorkspaceHandController["Left & Right Hand SVG Diagrams"]
+        PianoFingeringEngine --> WorkspaceHandController["Left & Right Hand Diagrams"]
         PianoFingeringEngine --> PianoKeyboard["61-Key SVG Docked Keyboard"]
         PlaybackClock --> SongAudioController["HTML5 Audio Element & Tone.js Synth"]
     end
@@ -115,111 +136,103 @@ graph TD
 
 ---
 
-## Development Philosophy & Architectural Focus
+## Core Features
 
-Earlier development iterations concurrently explored multi-screen layouts, lyric transcriptions, separate practice views, and overlapping tab controllers. This created fragmented state management, visual clutter, and synchronization divergence.
-
-For **Version 0.3**, HotChords was intentionally focused around a **single cohesive interactive music stand**:
-1. **One Authoritative Clock**: `PlaybackClock` serves as the sole source of truth for audio playback, synthesized piano sounds, chord boundaries, hand diagrams, and piano key illumination.
-2. **Deterministic UI**: Transitions, seeks, pauses, and restarts resolve instantaneously with zero orphaned transient animation nodes or drifting timers.
-3. **Immersive Scale**: The interface uses the full viewport to present large, legible learning elements rather than sparse dashboards.
-4. **Transparent Progress**: Processing stages expose real DSP pipeline progress instead of arbitrary spinners.
-
----
-
-## Known Limitations & Active Research
-
-* **Active UI/UX Development**: Visual balance and ergonomics are continuously being refined.
-* **Chord Detection Accuracy**: The current pipeline uses CQT chroma template matching and Viterbi HMM smoothing. While effective on structured acoustic and pop songs, dense harmonic layers, heavy distortion, or polyphonic textures require ongoing validation and tuning.
-* **Separation Latency**: Stems separation (Demucs) on longer tracks requires local CPU/GPU computation time.
+* **Single Permanent Workspace**: Consolidated interactive music stand eliminating multi-screen tab switching.
+* **Dual Chord Modes**:
+  * **Simplified Mode**: Musically sound harmonic reduction collapsing complex extensions, diminished harmonies, and rapid passing chords into beginner-playable triads.
+  * **Original Mode**: Unreduced harmonic progression capturing authentic chord alterations.
+* **Stationary Timeline Column Anchors**: `PREVIOUS`, `CURRENT CHORD`, and `NEXT` labels remain spatially fixed while chord cards slide physically via GPU-accelerated WAAPI transitions.
+* **Interactive Hand Guidance**: Left Hand (Bass root + 5th power foundation) and Right Hand (Triad harmony) with color-coded finger chips (1=Thumb..5=Pinky).
+* **Docked 61-Key Piano**: Key illumination synchronized strictly with Left/Right hand finger assignments.
+* **Synchronized Transport Controls**: Play, Pause, Resume, Restart, Stop, Variable Speeds (`0.50x`, `0.75x`, `1.00x`), and Sustain Pedal toggling.
 
 ---
 
-## Quick Start
+## Offline Use
+
+HotChords operates **100% offline and locally**. All audio processing, harmonic analysis, chord detection, and synthesized tone playback are executed on your local machine. No audio is ever uploaded to external cloud servers.
+
+---
+
+## Accuracy & Limitations
+
+* **Chord Detection Research**: Chord detection is currently under continuous real-song validation. The project maintains automated and real-song regression testing suites, but an independently annotated ground-truth dataset has not yet been established for an overall accuracy percentage. Accuracy is not represented as 100% or commercially complete.
+* **Acoustic / Dense Audio**: Detection performs reliably on structured acoustic, pop, and vocal tracks. Highly distorted mixes, dense orchestral polyphony, or heavily detuned instruments remain active areas of ongoing research.
+* **Source Separation**: Local stem separation relies on Demucs and available CPU/GPU resources.
+
+---
+
+## Project Status
+
+* **Current Release**: Version 0.3 (`v0.3.0`)
+* **Development Status**: **Active Open-Source Development**
+* **UI/UX Status**: Continuous Iteration & Refinement
+* **Application Scope**: Version 0.3 is a stable development milestone establishing the unified single workspace, scale corrections, and synchronization foundation. Additional features are intentionally deferred to future milestones.
+
+---
+
+## Development (For Contributors Only)
+
+> [!NOTE]
+> This section is for developers contributing to the HotChords codebase. End users should follow the [Install HotChords](#install-hotchords) section above.
 
 ### Prerequisites
-- **Python**: 3.10, 3.11, or 3.12
-- **Node.js**: v18+ (for testing & browser QA suites)
+* **Python**: 3.10, 3.11, or 3.12
+* **Node.js**: v18+ (for automated browser QA and unit testing)
 
-### Setup & Launch
+### Setup & Local Execution
 
 #### macOS / Linux
 ```bash
-# 1. Clone repository
+# Clone the repository
 git clone https://github.com/itshotfix/HotChords.git
 cd HotChords
 
-# 2. Setup environment and install dependencies
+# Run setup script
 bash scripts/setup_mac.sh
 
-# 3. Launch HotChords
+# Start development server
 bash scripts/start_mac.sh
 ```
 
 #### Windows
 ```cmd
-:: 1. Clone repository
+:: Clone the repository
 git clone https://github.com/itshotfix/HotChords.git
 cd HotChords
 
-:: 2. Setup environment
+:: Run setup script
 scripts\setup_windows.bat
 
-:: 3. Launch HotChords
+:: Start development server
 scripts\start_windows.bat
 ```
 
-The application runs locally at `http://localhost:5500`.
+### Running Automated Test Suites
 
----
-
-## Verification & Testing
-
-### Python Backend & Integration Suite (32 Scenarios)
 ```bash
+# Python backend & integration suite (32 tests)
 ./venv/bin/python -m pytest tests/ -v
-```
 
-### JavaScript Unit & Architecture Test Suites
-```bash
+# JavaScript architecture & playback suites (37 tests)
 npm test
-```
 
-### Automated Multi-Viewport Visual QA & Real Song Validation
-```bash
-node scripts/validate_workspace_scale_and_balance.js
+# 4-Song real-audio regression test (100 scenarios)
 node scripts/validate_workspace_real_songs.js
+
+# Multi-viewport scale and spatial balance QA
+node scripts/validate_workspace_scale_and_balance.js
 ```
 
 ---
 
-## Project Structure
+## Contributing
 
-```
-HotChords/
-├── hotchords.py                                    # Local application launcher
-├── backend/                                        # Python DSP & Music Theory backend
-│   ├── api/                                        # FastAPI endpoints (/analyze, /progress, /result)
-│   ├── analysis/                                   # Audio decoding, CQT chroma, Viterbi HMM
-│   ├── theory/                                     # Music theory normalization & simplification
-│   ├── models/                                     # Pydantic data contracts (SongTimeline)
-│   └── utils/                                      # Environment preflight & diagnostics
-├── frontend/                                       # Single Workspace Web Application
-│   ├── index.html                                  # Single workspace music stand shell
-│   ├── css/piano.css                               # Design system, layout tokens, and animations
-│   └── js/
-│       ├── audio/                                  # PlaybackClock, Web Audio synth, audio controller
-│       ├── engine/                                 # CurrentChordEngine, PianoFingeringEngine
-│       └── ui/                                     # WorkspaceChordTimeline, WorkspaceHandController, PianoKeyboard
-├── tests/                                          # Pytest and JavaScript test suites
-├── scripts/                                        # Setup scripts, QA runners, and validation tools
-├── test songs/                                     # Real-song validation audio files
-└── docs/                                           # Architecture specs, changelog, and release screenshots
-    └── screenshots/v0.3/                           # Official v0.3 high-resolution visual documentation
-```
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before submitting pull requests.
 
 ---
 
-## License & Contributing
-HotChords is open-source software licensed under the [MIT License](LICENSE).
-Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) before submitting pull requests.
+## License
+
+HotChords is free and open-source software licensed under the [MIT License](LICENSE).
