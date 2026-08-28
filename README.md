@@ -55,27 +55,28 @@ HotChords is an open-source piano chord detection and interactive learning works
 
 ```mermaid
 graph TD
-    User --> |Uploads Audio| Web_UI[Single Workspace UI]
+    User --> |Uploads Audio| Web_UI["Single Workspace UI"]
     Web_UI --> |POST /analyze| Audio_Processing
     
-    subgraph Backend [Python Backend]
-        Audio_Processing[Audio Loader / Separation] --> Harmonic_Rep[Chroma CQT Extraction]
-        Harmonic_Rep --> Chord_Detection[Cosine Similarity & Viterbi HMM]
-        Chord_Detection --> Theory_Engine[Theory Engine: Normalization & Simplification]
-        Theory_Engine --> SongTimeline_Model[SongTimeline Canonical Model]
+    subgraph Backend ["Python Backend"]
+        Audio_Processing["Audio Loader / Separation"] --> Harmonic_Rep["Chroma CQT Extraction"]
+        Harmonic_Rep --> Chord_Detection["Cosine Similarity & Viterbi HMM"]
+        Chord_Detection --> Theory_Engine["Theory Engine: Normalization & Simplification"]
+        Theory_Engine --> SongTimeline_Model["SongTimeline Canonical Model"]
     end
     
     SongTimeline_Model --> |Returns JSON| Web_UI
     
-    subgraph Frontend [Synchronized Playback Architecture]
-        PlaybackClock[PlaybackClock (Single Authoritative Time Source)]
-        PlaybackClock --> CurrentChordEngine[CurrentChordEngine (State Resolution)]
-        CurrentChordEngine --> PianoFingeringEngine[PianoFingeringEngine (Voicings & Hands)]
-        PianoFingeringEngine --> WorkspaceChordTimeline[3-Chord WAAPI Timeline]
-        PianoFingeringEngine --> WorkspaceHandController[Left & Right Hand Diagrams]
-        PianoFingeringEngine --> PianoKeyboard[61-Key SVG Keyboard]
+    subgraph Frontend ["Synchronized Playback Architecture"]
+        PlaybackClock["PlaybackClock (Single Authoritative Time Source)"]
+        PlaybackClock --> CurrentChordEngine["CurrentChordEngine (State Resolution)"]
+        CurrentChordEngine --> PianoFingeringEngine["PianoFingeringEngine (Voicings & Hands)"]
+        PianoFingeringEngine --> WorkspaceChordTimeline["3-Chord WAAPI Timeline"]
+        PianoFingeringEngine --> WorkspaceHandController["Left & Right Hand Diagrams"]
+        PianoFingeringEngine --> PianoKeyboard["61-Key SVG Keyboard"]
     end
 ```
+
 
 ---
 
