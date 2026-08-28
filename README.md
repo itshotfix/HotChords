@@ -1,300 +1,162 @@
 # HotChords
 
-"Turn any song into something a beginner pianist can play."
+> **"Turn any song into something a beginner pianist can play."**
 
-HotChords is a free and open-source piano chord detection and learning application designed for beginners who want to play their favorite songs but struggle with complicated chords and piano voicings. 
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](CHANGELOG.md)
+[![Status](https://img.shields.io/badge/status-active%20development-orange.svg)](README.md)
+[![Tests](https://img.shields.io/badge/tests-32%2F32%20passing-brightgreen.svg)](tests/)
 
-The application analyzes songs and translates detected musical information into a piano-focused learning experience. The long-term goal is to make songs easier for beginners to play by creating simpler, practical arrangements.
+---
 
-## Why HotChords?
+## Release Status: Version 0.2.0 (Development Milestone)
 
-Learning a song on piano is often not difficult because the song itself is impossible. It is difficult because the original chord arrangement may be too complicated for a beginner. 
+> [!IMPORTANT]
+> - **Product Status**: Active Development
+> - **UI/UX Status**: In Progress / Continuous Iteration
+> - **Application Development**: **Not Complete**
+> - **Milestone Scope**: Version 0.2 is an intentional stabilization and core architecture milestone. During earlier development, multiple features and complex UI layouts were built concurrently. To ensure rock-solid stability and clear code boundaries, we intentionally simplified the application into a single, cohesive interactive music stand before expanding functionality further.
 
-HotChords is designed to bridge the gap between **SONG** and **BEGINNER-PLAYABLE PIANO ARRANGEMENT**.
+---
 
-The application eventually helps a user move from:
-1. "I don't know what chords are being played."
-2. "I know the chords."
-3. "I know which keys to press."
-4. "I know which fingers to use."
-5. "I can actually play the song."
+## What is HotChords?
 
-## What Problem Are We Solving?
+HotChords is an open-source piano chord detection and interactive learning workstation. When a user uploads a song, HotChords immediately answers the core musical question:
 
-A beginner pianist may want to play a song but struggle because the original song contains complicated chords, inversions, difficult voicings, or frequent chord changes.
+> **"What chord should I play right now, which keys should I press, and which fingers should I use?"**
 
-Existing chord detection tools can tell the user: *"What chord is this?"*
+---
 
-HotChords wants to go further and answer: *"How can a beginner actually play this song?"*
+## Core Functionality (v0.2.0)
 
-The product philosophy is:
-**DETECT THE CHORD. SIMPLIFY THE CHORD. SHOW THE USER HOW TO PLAY IT.**
+1. **Audio Loading & Analysis**:
+   - Local audio processing for MP3, WAV, FLAC, M4A, OGG, AAC.
+   - BPM, key detection, and harmonic separation.
+2. **Dual-Mode Chord System**:
+   - **Original Chords**: Detects and tracks harmonic progressions with overtone-aware template matching and Viterbi HMM smoothing.
+   - **Simplified Chords**: Musically sound harmonic reduction collapsing complex extensions, suspended chords, and rapid passing chords into beginner-playable triads.
+3. **Single Permanent Workspace (Interactive Music Stand)**:
+   - Unified 4-tier vertical hierarchy: Header $\to$ Mode Selector & Controls $\to$ Central Learning Area $\to$ Persistent Piano $\to$ Transport & Waveform.
+4. **Deterministic 3-Chord Timeline**:
+   - **Previous < Current Hero > Next** physical sliding reel powered by GPU-accelerated WAAPI animations.
+   - Hero Current Chord treatment (`scale(1.08)` + subtle glow + note breakdowns).
+   - Instantaneous seek reset with zero animation lag.
+5. **Interactive Hand Guidance**:
+   - Left Hand (Bass root + 5th power foundation) and Right Hand (Triad/7th harmony).
+   - Reactive finger-press downward micro-animations and color-coded note chips.
+6. **Persistent 61-Key Piano Keyboard**:
+   - Shared SVG keyboard with color-coded key illumination strictly matching Left and Right hand finger assignments.
+7. **Synchronized Playback Engine**:
+   - Single authoritative `PlaybackClock` orchestrating audio, Web Audio synth, chord progression, hands, and piano.
+   - Play, Pause, Resume, Restart, Stop, Variable Speeds (0.50x, 0.75x, 1.00x), and Sustain Pedal control.
 
-## How HotChords Works
+---
 
-1. **Upload** a song locally.
-2. HotChords **analyzes** the audio (extracting chroma features, detecting beats, and tracking chords).
-3. The Viterbi HMM **smoothes** detections into a musical progression.
-4. The theory engine **simplifies** and normalizes the chords.
-5. The UI displays **synchronized piano voicings** and fingering instructions as the song plays.
-
-## Current Features
-
-**AUDIO / ANALYSIS**
-- Local song upload (processes entirely on your machine)
-- Audio processing & waveform visualization
-- Song playback & seeking
-- BPM & key detection
-- Harmonic separation (HPSS)
-- Beat-synced chord progression analysis
-
-**CHORD SYSTEM**
-- Musician-friendly chord naming (enharmonic normalization)
-- Chord progression visualization with Roman numerals
-- Beginner-oriented chord representation (basic triad collapsing)
-
-**PIANO**
-- Responsive 61-key piano keyboard (SVG)
-- Chord note highlighting
-- One playable voicing per hand (rather than highlighting every octave)
-- Dedicated left-hand (bass) and right-hand (harmony) notes
-- Note labels on keys
-
-**FINGERING / LEARNING**
-- Left and right hand fingering assignments
-- 5-color visual relationship between fingers and keys
-- Animated hand visualization showing finger placement
-
-**UI**
-- Apple-inspired, responsive full-screen visual design
-- Interactive waveform and playback controls
-- Current chord and upcoming progression display
-
-## Piano Learning Experience
-
-HotChords is intentionally piano-first. 
-
-The application connects: **CHORD → NOTES → HAND → FINGERS → PIANO KEYS**.
-
-This means the user should not need to understand music theory deeply before being able to play. We focus on:
-- Practical voicings (Octave 2 for left hand, Octave 4 for right hand)
-- Clear left/right hand separation
-- Pedagogical finger numbering
-- Visual piano guidance with synchronized chord changes
-
-## Product Vision
-
-HotChords is an open-source project working towards a long-term dream:
-
-UPLOAD A SONG 
-↓ 
-DETECT THE CHORDS 
-↓ 
-UNDERSTAND MUSICAL CONTEXT 
-↓ 
-SIMPLIFY COMPLEX CHORDS 
-↓ 
-CREATE A BEGINNER-FRIENDLY ARRANGEMENT 
-↓ 
-**CREATE A 4-CHORD VERSION WHERE MUSICALLY APPROPRIATE** 
-↓ 
-SHOW THE USER HOW TO PLAY IT 
-↓ 
-SYNCHRONIZE WITH THE SONG
-
-*Note: HotChords does not currently force every song into 4 chords. This is a long-term goal to find the simplest practical representation that still allows a beginner to recognize and play the song without destroying its musical identity.*
-
-## Technology
-
-HotChords is built on a lightweight, dependency-conscious stack:
-
-- **Python (3.10–3.12)**: Backend processing and application entry point.
-- **FastAPI / Uvicorn**: High-performance asynchronous API for local serving.
-- **Librosa / NumPy / SciPy**: Core DSP, harmonic separation, and feature extraction.
-- **PyTorch / Demucs (Optional)**: Deep-learning based stem separation to isolate instruments.
-- **Vanilla JavaScript, HTML, CSS**: Zero-build-step frontend for maximum portability.
-- **GSAP 3**: Smooth, high-performance UI animations for hand diagrams.
-- **Web Audio API**: Browser-based playback, pitch-shifting (detuning), and waveform rendering.
-
-## Architecture
+## System Architecture
 
 ```mermaid
 graph TD
-    User --> |Uploads Audio| Web_UI
+    User --> |Uploads Audio| Web_UI[Single Workspace UI]
     Web_UI --> |POST /analyze| Audio_Processing
     
     subgraph Backend [Python Backend]
         Audio_Processing[Audio Loader / Separation] --> Harmonic_Rep[Chroma CQT Extraction]
         Harmonic_Rep --> Chord_Detection[Cosine Similarity & Viterbi HMM]
         Chord_Detection --> Theory_Engine[Theory Engine: Normalization & Simplification]
+        Theory_Engine --> SongTimeline_Model[SongTimeline Canonical Model]
     end
     
-    Theory_Engine --> |Returns JSON| Web_UI
+    SongTimeline_Model --> |Returns JSON| Web_UI
     
-    subgraph Frontend [Vanilla JS Frontend]
-        Web_UI --> Chord_Timeline[Chord Timeline Sync]
-        Chord_Timeline --> Piano_Voicing[Voicing Engine]
-        Piano_Voicing --> Fingering_Engine[Fingering Assignment]
-        Fingering_Engine --> Piano_Viz[Piano & Hand Visualization]
+    subgraph Frontend [Synchronized Playback Architecture]
+        PlaybackClock[PlaybackClock (Single Authoritative Time Source)]
+        PlaybackClock --> CurrentChordEngine[CurrentChordEngine (State Resolution)]
+        CurrentChordEngine --> PianoFingeringEngine[PianoFingeringEngine (Voicings & Hands)]
+        PianoFingeringEngine --> WorkspaceChordTimeline[3-Chord WAAPI Timeline]
+        PianoFingeringEngine --> WorkspaceHandController[Left & Right Hand Diagrams]
+        PianoFingeringEngine --> PianoKeyboard[61-Key SVG Keyboard]
     end
 ```
 
-## Screenshots
-
-Here is HotChords in action during the chord detection and playback phase:
-
-| Chord Detection (Original Analysis) | Chord Detection (Beginner Chart) |
-|:---:|:---:|
-| ![Original Analysis](docs/screenshots/HotChords1.png) | ![Beginner Chart](docs/screenshots/HotChords2.png) |
+---
 
 ## Quick Start
 
-### Windows
+### Prerequisites
+- **Python**: 3.10, 3.11, or 3.12
+- **Node.js**: v18+ (for running validation test suites)
 
-```cmd
-git clone https://github.com/hotfix/hotchords.git
-cd hotchords
+### Setup & Launch
 
-scripts\setup_windows.bat
-scripts\start_windows.bat
-```
-
-The setup script will:
-- Verify your Python version (3.10–3.12 required)
-- Create a virtual environment
-- Install all dependencies (including FFmpeg — no manual install needed)
-- Verify the installation
-
-The start script will launch the server and open HotChords in your default browser.
-
-### macOS
-
+#### macOS / Linux
 ```bash
-git clone https://github.com/hotfix/hotchords.git
-cd hotchords
+# 1. Clone the repository
+git clone https://github.com/itshotfix/HotChords.git
+cd HotChords
 
+# 2. Setup environment and install dependencies
 bash scripts/setup_mac.sh
+
+# 3. Launch HotChords
 bash scripts/start_mac.sh
 ```
 
-### Manual Developer Setup
+#### Windows
+```cmd
+:: 1. Clone repository
+git clone https://github.com/itshotfix/HotChords.git
+cd HotChords
 
-If you prefer full control over your environment:
+:: 2. Setup environment
+scripts\setup_windows.bat
 
-```bash
-# Requires Python 3.10, 3.11, or 3.12
-python3 -m venv venv
-source venv/bin/activate          # macOS/Linux
-# venv\Scripts\activate           # Windows
-
-pip install -r requirements.txt
-python3 hotchords.py
+:: 3. Launch HotChords
+scripts\start_windows.bat
 ```
 
-*(Optional): If you do not want to install PyTorch/Demucs for AI stem separation, install the lightweight requirements instead:*
-`pip install librosa soundfile fastapi uvicorn pydantic python-multipart numpy scipy imageio-ffmpeg`
+The application will start locally at `http://localhost:5500`.
 
-### Verify Your Setup
+---
 
-HotChords includes a built-in environment check:
+## Running Tests
+
+### Python Backend & Integration Test Suite (32 Tests)
 ```bash
-python -m backend.utils.preflight
+./venv/bin/python -m pytest tests/ -v
 ```
 
-### Platform Support
-
-| Platform | Status |
-|----------|--------|
-| **macOS** (Intel & Apple Silicon) | ✅ Supported |
-| **Windows** 10/11 | ✅ Supported (scripts prepared, requires validation on Windows hardware) |
-| **Linux** | ⚠️ Not officially tested — likely works but not validated |
-
-## Running Locally
-
-To start the application:
-
+### Real-Song Browser Validation (Puppeteer)
 ```bash
-python3 hotchords.py
+node scripts/validate_workspace_real_songs.js
 ```
 
-The browser will automatically open to `http://localhost:5500`.
-If port 5500 is occupied, HotChords will automatically use the next available port.
+---
 
 ## Project Structure
 
 ```
-HotChords App/
-├── hotchords.py              # Application entry point
-├── backend/                  # Python DSP & Theory engines
-│   ├── main.py               # Uvicorn server configuration
-│   ├── api/                  # FastAPI routes
-│   ├── analysis/             # Core audio pipeline (HPSS, CQT, Viterbi)
-│   ├── theory/               # Music theory, simplification, enharmonics
-│   └── utils/                # State management
-├── frontend/                 # Static web assets (Vanilla JS)
-│   ├── index.html            # Main UI shell
-│   ├── css/piano.css         # Apple-inspired design system
+HotChords/
+├── hotchords.py              # Local application launcher
+├── backend/                  # Python DSP & Theory backend
+│   ├── api/                  # FastAPI endpoints (/analyze, /timeline)
+│   ├── analysis/             # Audio decoding, CQT chroma, Viterbi HMM
+│   ├── theory/               # Music theory normalization & simplification
+│   ├── models/               # Pydantic data contracts (SongTimeline)
+│   └── utils/                # Environment preflight & diagnostics
+├── frontend/                 # Static web application (Vanilla JS)
+│   ├── index.html            # Single workspace music stand shell
+│   ├── css/piano.css         # Design system & responsive layout
 │   └── js/
-│       ├── engine/           # Voicing and naming logic
-│       ├── ui/               # SVG generation for piano and hands
-│       └── animations/       # GSAP controllers
-├── docs/                     # Extended documentation (Pipeline, Fingering)
-├── scripts/                  # Setup & start scripts (Windows + macOS)
-├── docs/                     # Documentation & troubleshooting
-└── tests/, .github/          # Dev tools
+│       ├── audio/            # PlaybackClock, Web Audio synth, audio controller
+│       ├── engine/           # CurrentChordEngine, PianoFingeringEngine
+│       └── ui/               # WorkspaceChordTimeline, WorkspaceHandController, PianoKeyboard
+├── tests/                    # Pytest and JavaScript test suites
+├── scripts/                  # OS setup scripts and validation runners
+├── test songs/               # Real-song validation audio files
+└── docs/                     # Architectural documentation & technical specs
 ```
 
-## Accuracy Philosophy
+---
 
-Chord detection accuracy is one of our most important technical goals. 
-
-We do not claim that HotChords is currently the "most accurate" chord detector in the world. Instead, we are actively researching and improving:
-- Harmonic separation and Chroma representations
-- Overtone-aware chord templates
-- Temporal smoothing and Viterbi decoding
-- Chord transition modeling
-
-*Current implementation details can be found in [docs/AUDIO_PIPELINE.md](docs/AUDIO_PIPELINE.md).*
-
-## Privacy
-
-**HotChords is a 100% local application.**
-- All audio processing happens on your machine.
-- Audio files are never uploaded to the cloud.
-- No external APIs are used for analysis.
-- No telemetry or tracking is embedded.
-- Temporary audio stems are written to your local system's temp folder and cleaned up automatically.
-
-## Current Limitations
-
-- **Complex Arrangements:** Dense electronic or heavily layered tracks may confuse the current chroma-based detector.
-- **Rhythm Extraction:** Chord boundaries are quantized to detected beats; heavily syncopated tracks may show slight visual misalignment.
-
-## Roadmap
-
-**CURRENT**
-- Local audio upload and Viterbi-smoothed chord detection.
-- SVG 61-key piano rendering and pedagogical fingering assignment.
-- Real-time Web Audio API playback with GSAP UI sync.
-
-**IN DEVELOPMENT**
-- Improving Demucs AI stem separation integration.
-- Enhancing the chord transition matrix for jazz/complex harmonies.
-
-**FUTURE (Long-term goals)**
-- Intelligent chord simplification (Beginner-friendly 4-chord arrangements).
-- Better piano voicing selection and voice-leading.
-- Cross-platform desktop packaging (Tauri).
-- Benchmarking against MIR datasets (e.g., McGill Billboard).
-
-## Contributing
-
-HotChords is a serious open-source project under active development. 
-
-We invite contributions from Developers, DSP engineers, MIR researchers, Musicians, Piano teachers, and UX designers to help build the future of beginner-friendly music learning.
-
-Please read our [CONTRIBUTING.md](CONTRIBUTING.md) to understand our "Accuracy over features" philosophy and local setup instructions.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## License & Contributing
+HotChords is open-source software licensed under the [MIT License](LICENSE).
+Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) before submitting pull requests.

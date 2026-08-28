@@ -11,8 +11,9 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.analysis.pipeline import run_pipeline
+from backend.models import SongTimeline, APP_VERSION
 
-app = FastAPI(title="HotChords API")
+app = FastAPI(title="HotChords API", version=APP_VERSION)
 
 # Enable CORS
 app.add_middleware(
@@ -40,8 +41,17 @@ def run_analysis_task(temp_path: str, filename: str, cleanup: bool = False):
     _progress.update({"msg": "Starting...", "pct": 0})
     
     try:
-        data = run_pipeline(temp_path, upd_callback=upd_callback)
+        raw_analysis = run_pipeline(temp_path, upd_callback=upd_callback)
+        raw_analysis["file"] = filename
+        
+        # Convert analysis result into canonical SongTimeline
+        timeline = SongTimeline.from_analysis_dict(raw_analysis)
+        
+        # Build backwards-compatible legacy dictionary for current frontend
+        data = timeline.to_analysis_dict()
         data["file"] = filename
+        data["timeline"] = timeline.model_dump(by_alias=True)
+        
         _result["data"] = data
         _result["error"] = None
         _result["ready"] = True
@@ -58,6 +68,10 @@ def run_analysis_task(temp_path: str, filename: str, cleanup: bool = False):
             except:
                 pass
 
+@app.get("/health")
+def get_health():
+    return {"status": "ready"}
+
 @app.get("/progress")
 def get_progress():
     return _progress
@@ -66,22 +80,46 @@ def get_progress():
 def get_result():
     if _result["ready"]:
         if _result["error"]:
+            return JSONResponse(status_code=200, content={"ready": True, "error": _result["error"]})
+        if _result["data"]:
+            data = dict(_result["data"])
+            data["ready"] = True
+            data["error"] = None
+            return data
+        return JSONResponse(status_code=200, content={"ready": True, "error": "No data generated"})
+    return JSONResponse(status_code=200, content={"ready": False})
+
+@app.get("/timeline")
+def get_timeline():
+    if _result["ready"]:
+        if _result["error"]:
             return JSONResponse(status_code=500, content={"error": _result["error"]})
-        return _result["data"]
+        if _result["data"] and "timeline" in _result["data"]:
+            return _result["data"]["timeline"]
+        return JSONResponse(status_code=404, content={"error": "Timeline not found"})
     return JSONResponse(status_code=202, content={"ready": False})
+
 
 @app.post("/analyze-path")
 def analyze_path(payload: dict, background_tasks: BackgroundTasks):
+    global _result, _progress, _analyzing
     fpath = payload.get("path", "")
     if not os.path.isfile(fpath):
         raise HTTPException(status_code=400, detail=f"File not found: {fpath}")
     
-    _progress.update({"msg": "Starting...", "pct": 1})
+    _result = {"ready": False, "data": None, "error": None}
+    _progress = {"msg": "Starting...", "pct": 1}
+    _analyzing = True
     background_tasks.add_task(run_analysis_task, fpath, os.path.basename(fpath), False)
     return {"status": "started"}
 
 @app.post("/analyze")
 def analyze_upload(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    global _result, _progress, _analyzing
+    _result = {"ready": False, "data": None, "error": None}
+    _progress = {"msg": "Saving uploaded audio file...", "pct": 5}
+    _analyzing = True
+
     suffix = os.path.splitext(file.filename)[1] if file.filename else '.tmp'
     
     # Save UploadFile to a named temporary file
@@ -95,9 +133,12 @@ def analyze_upload(background_tasks: BackgroundTasks, file: UploadFile = File(..
             os.unlink(temp_path)
         except:
             pass
+        _result = {"ready": True, "data": None, "error": f"Could not save uploaded file: {e}"}
+        _progress = {"msg": "Upload failed", "pct": 0}
+        _analyzing = False
         raise HTTPException(status_code=500, detail=f"Could not save uploaded file: {e}")
         
-    _progress.update({"msg": "File received, analyzing...", "pct": 10})
+    _progress.update({"msg": "File received, starting analysis...", "pct": 10})
     background_tasks.add_task(run_analysis_task, temp_path, file.filename, True)
     return {"status": "started"}
 
@@ -109,6 +150,8 @@ frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 
 app.mount("/css", StaticFiles(directory=os.path.join(frontend_dir, "css")), name="css")
 app.mount("/js", StaticFiles(directory=os.path.join(frontend_dir, "js")), name="js")
+app.mount("/audio", StaticFiles(directory=os.path.join(frontend_dir, "audio")), name="audio")
+
 
 @app.get("/")
 def get_index():

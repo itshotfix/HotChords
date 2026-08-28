@@ -28,6 +28,15 @@ jobs:
           pip install --upgrade pip
           pip install librosa numpy scipy fastapi uvicorn pydantic python-multipart
 
+      - name: Install test dependencies
+        run: |
+          pip install pytest
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Check that all backend modules import cleanly
         # This catches broken imports, missing __init__ files, and syntax errors
         # across the entire backend package without running a full analysis.
@@ -40,13 +49,20 @@ jobs:
           python -c "import backend.theory.theory"
           python -c "import backend.theory.chords"
           python -c "import backend.theory.constants"
+          python -c "import backend.theory.simplification"
           python -c "import backend.theory.analysis_helpers"
           python -c "import backend.utils.progress"
           python -c "import backend.utils.state"
           python -c "import backend.utils.preflight"
+          python -c "import backend.models"
           python -c "import backend.models.responses"
+          python -c "import backend.models.timeline"
           python -c "import backend.main"
           echo "All backend modules imported successfully."
 
+
       - name: Check entry point syntax
         run: python -m py_compile hotchords.py && echo "hotchords.py OK"
+
+      - name: Run Test Suite
+        run: pytest tests/ -v

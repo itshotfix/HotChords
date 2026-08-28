@@ -1,0 +1,22 @@
+Salamander Grand Piano Samples
+Sampled from a Yamaha C5 Grand Piano by Alexander Holm
+Official SFZ Repository: https://github.com/sfzinstruments/SalamanderGrandPiano
+Tone.js Audio Archive: https://github.com/Tonejs/audio/tree/master/salamander
+
+License: Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+https://creativecommons.org/licenses/by/3.0/
+
+Attribution:
+"Salamander Grand Piano" by Alexander Holm (axeldenstore (at) gmail (dot) com).
+These recordings are genuine acoustic multi-samples of a Yamaha C5 grand piano.
+Bundled files (30 real recordings):
+- A0.mp3, C1.mp3, Ds1.mp3, Fs1.mp3, A1.mp3
+- C2.mp3, Ds2.mp3, Fs2.mp3, A2.mp3
+- C3.mp3, Ds3.mp3, Fs3.mp3, A3.mp3
+- C4.mp3, Ds4.mp3, Fs4.mp3, A4.mp3
+- C5.mp3, Ds5.mp3, Fs5.mp3, A5.mp3
+- C6.mp3, Ds6.mp3, Fs6.mp3, A6.mp3
+- C7.mp3, Ds7.mp3, Fs7.mp3, A7.mp3
+- C8.mp3
+Total Size: ~1.92 MB
+Tone.Sampler automatically pitch-interpolates all intermediate semitones with near-lossless acoustic fidelity across the entire 88-key piano range.

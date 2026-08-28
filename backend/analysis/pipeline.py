@@ -25,10 +25,9 @@ from backend.theory.theory import (
     chord_difficulty, chord_roman, _scale_notes, get_pitch_class,
     simplify_progression
 )
+from backend.analysis.source_separation import separate_stems, STEMS_DIR
 
-STEMS_DIR = os.path.join(tempfile.gettempdir(), 'hotchords_stems')
-if not os.path.exists(STEMS_DIR):
-    os.makedirs(STEMS_DIR)
+
 
 # ══════════════════════════════════════════════════════════════
 #  OVERTONE-AWARE TEMPLATES
@@ -232,53 +231,12 @@ def run_pipeline(filepath, upd_callback=None):
 
     update('Loading song...', 5)
     
-    # Optional stem separation via torch/demucs with GPU auto-detection
-    try:
-        import torch
-        from demucs import pretrained
-        from demucs.apply import apply_model
-        from demucs.audio import save_audio
-        
-        update('Preparing analysis...', 10)
-        
-        # Determine best available hardware accelerator
-        device = 'cpu'
-        if torch.cuda.is_available():
-            device = 'cuda'
-        elif torch.backends.mps.is_available():
-            device = 'mps'
-            
-        print(f"  [Info] Running Demucs separation on target device: {device}")
-        
-        model = pretrained.get_model('htdemucs')
-        model.to(device)
-        
-        wav, sr = librosa.load(filepath, sr=model.samplerate, mono=False)
-        # Ensure 2D tensor shape (channels, samples)
-        if wav.ndim == 1:
-            wav = np.stack([wav, wav])
-        wav_torch = torch.tensor(wav, device=device).unsqueeze(0)
-        
-        update('Separating vocals and instruments...', 20)
-        with torch.no_grad():
-            sources = apply_model(model, wav_torch, device=device)[0]
-            
-        sources = sources.cpu()
-        # Instrumental stem = drums (0) + bass (1) + other (2)
-        instrumental_audio = sources[0] + sources[1] + sources[2]
-        
-        base_name = os.path.basename(filepath).split('.')[0]
-        inst_path = os.path.join(STEMS_DIR, f"{base_name}_inst.wav")
-        save_audio(instrumental_audio, inst_path, samplerate=model.samplerate)
-        
-        analysis_path = inst_path
-        # Clean up torch resources
-        del sources, wav_torch
-        if device != 'cpu':
-            torch.cuda.empty_cache() if device == 'cuda' else gc.collect()
-    except Exception as e:
-        print(f"  [Info] AI Separation skipped or failed: {e}")
-        analysis_path = filepath
+    # ══════════════════════════════════════════════════════════════
+    #  STAGE 1: STEM SEPARATION (ISOLATES INSTRUMENTS FOR CHORD ACCURACY)
+    inst_path, voc_path, sep_success = separate_stems(filepath, upd_callback=update)
+    analysis_path = inst_path if sep_success else filepath
+
+
 
     update('Preparing analysis...', 28)
     # 22kHz is sufficient for chroma (highest piano note C7 ≈ 2093Hz, well below Nyquist)
@@ -392,7 +350,24 @@ def run_pipeline(filepath, upd_callback=None):
     #  GENERATE BEGINNER CHART
     # ══════════════════════════════════════════════════════════════
     update('Generating beginner chart...', 92)
-    beginner_chords, easy_key, transpose_offset = simplify_progression(chords, friendly_key, scale)
+    from backend.theory.simplification import simplify_progression as simplify_beginner_progression
+    
+    beginner_events = simplify_beginner_progression(
+        chords=chords,
+        tempo=tempo,
+        key=friendly_key,
+        scale=scale
+    )
+    beginner_chords = [
+        {
+            'time': c.start_time,
+            'end': c.end_time,
+            'chord': c.chord_name,
+            'raw_chord': c.raw_chord or c.chord_name,
+            'confidence': c.confidence if c.confidence is not None else 1.0
+        }
+        for c in beginner_events
+    ]
     
     # Calculate unique chords for the beginner progression
     b_freq = {}
@@ -408,10 +383,9 @@ def run_pipeline(filepath, upd_callback=None):
             'fingers': chord_fingers(c),
             'difficulty': chord_difficulty(c),
         }
-        
     for c in unique_beginner_chords:
         if c not in roman_numerals:
-            roman_numerals[c] = chord_roman(c, easy_key, scale)
+            roman_numerals[c] = chord_roman(c, friendly_key, scale)
 
     update('Done!', 100)
     
@@ -431,7 +405,11 @@ def run_pipeline(filepath, upd_callback=None):
         # Beginner chart output
         'beginner_chords': beginner_chords,
         'unique_beginner_chords': unique_beginner_chords,
-        'easy_key': easy_key,
-        'easy_key_full': f'{easy_key} {scale}',
-        'transpose_offset': int(transpose_offset)
+        'easy_key': friendly_key,
+        'easy_key_full': f'{friendly_key} {scale}',
+        'transpose_offset': 0,
     }
+
+
+
+

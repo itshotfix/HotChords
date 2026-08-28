@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotChords - Beginner Piano Learning Renderer Testbed (Phase 6D-1)</title>
+    <link rel="stylesheet" href="/css/piano.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root {
+            --bg-page: #0B0D13;
+            --card-bg: #161922;
+            --card-border: #232836;
+            --accent-blue: #3B82F6;
+            --accent-green: #10B981;
+            --accent-yellow: #F59E0B;
+            --accent-purple: #8B5CF6;
+            --text-main: #F3F4F6;
+            --text-muted: #9CA3AF;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-main);
+            margin: 0;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 960px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 14px;
+        }
+
+        .title-group h1 {
+            font-size: 1.4rem;
+            margin: 0;
+            color: #FFFFFF;
+            font-weight: 700;
+        }
+
+        .title-group p {
+            font-size: 0.82rem;
+            margin: 4px 0 0 0;
+            color: var(--text-muted);
+        }
+
+        /* CONTROLS BAR */
+        .controls-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .ctrl-btn-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        button {
+            background: var(--card-border);
+            color: var(--text-main);
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        button:hover {
+            background: #2D3345;
+        }
+
+        button.btn-primary {
+            background: var(--accent-blue);
+            color: #FFFFFF;
+            border: none;
+        }
+
+        button.btn-primary:hover {
+            background: #2563EB;
+        }
+
+        button.active-rate {
+            background: var(--accent-green);
+            color: #064E3B;
+            font-weight: 700;
+        }
+
+        .seek-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-grow: 1;
+            min-width: 220px;
+        }
+
+        .seek-box input[type="range"] {
+            flex-grow: 1;
+            cursor: pointer;
+            accent-color: var(--accent-blue);
+        }
+
+        .time-disp {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* BEGINNER PIANO LEARNING RENDERER COMPONENT STYLES */
+        .bplr-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .bplr-hud-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 16px;
+        }
+
+        .bplr-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .bplr-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bplr-badge {
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .bplr-badge-current {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60A5FA;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .bplr-badge-next {
+            background: rgba(245, 158, 11, 0.15);
+            color: #FBBF24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .bplr-diff-badge {
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .bplr-diff-easy {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34D399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .bplr-diff-moderate {
+            background: rgba(245, 158, 11, 0.15);
+            color: #FBBF24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .bplr-diff-hard {
+            background: rgba(239, 68, 68, 0.15);
+            color: #F87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .bplr-chord-hero {
+            font-size: 2.6rem;
+            font-weight: 900;
+            color: #FFFFFF;
+            margin: 4px 0;
+            line-height: 1;
+        }
+
+        .bplr-next-chord-hero {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #E5E7EB;
+            margin: 4px 0;
+            line-height: 1;
+        }
+
+        .bplr-progress-bar-wrap {
+            width: 100%;
+            height: 6px;
+            background: #232836;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 4px 0;
+        }
+
+        .bplr-progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-blue);
+            transition: width 0.05s linear;
+        }
+
+        .bplr-notes-summary {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        .bplr-transition-advice {
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: #FBBF24;
+            margin-top: 4px;
+        }
+
+        .bplr-next-card.bplr-approaching {
+            border-color: rgba(245, 158, 11, 0.6);
+            background: #1C1B1E;
+            box-shadow: 0 0 16px rgba(245, 158, 11, 0.15);
+        }
+
+        /* HAND GUIDES */
+        .bplr-hand-guides-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .bplr-hand-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #D1D5DB;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bplr-finger-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .bplr-chip {
+            background: #202430;
+            border-radius: 6px;
+            padding: 5px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .bplr-chip-finger {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .bplr-chip-note {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #FFFFFF;
+        }
+
+        .bplr-idle-text {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        /* PIANO DOCK */
+        .bplr-keyboard-host {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            height: 180px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #bplr-piano-embed {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- HEADER -->
+    <div class="header">
+        <div class="title-group">
+            <h1>HotChords Beginner Piano Learning Engine</h1>
+            <p>Phase 6D-1 Isolated Testbed • Deterministic Voicings & Real-time Transition HUD</p>
+        </div>
+    </div>
+
+    <!-- PLAYBACK CONTROLS -->
+    <div class="controls-card">
+        <div class="ctrl-btn-group">
+            <button class="btn-primary" id="btn-play-pause" onclick="togglePlay()">Play ▶</button>
+            <button onclick="handleStop()">■ Stop</button>
+            <button onclick="handleRestart()">↺ Restart</button>
+        </div>
+
+        <div class="seek-box">
+            <span class="time-disp" id="val-cur-time">0:00</span>
+            <input type="range" id="seek-slider" min="0" max="8.0" step="0.05" value="0" oninput="handleSeek(this.value)">
+            <span class="time-disp" id="val-total-time">0:08</span>
+        </div>
+
+        <div class="ctrl-btn-group">
+            <button id="btn-spd-1" class="active-rate" onclick="setSpeed(1.0)">1.0x</button>
+            <button id="btn-spd-075" onclick="setSpeed(0.75)">0.75x</button>
+            <button id="btn-spd-05" onclick="setSpeed(0.50)">0.50x</button>
+        </div>
+    </div>
+
+    <!-- BEGINNER PIANO LEARNING COMPONENT MOUNT POINT -->
+    <div id="learning-renderer-root"></div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="/js/engine/musicTheoryFormatter.js"></script>
+<script src="/js/engine/pianoFingeringEngine.js"></script>
+<script src="/js/engine/chordTransitionEngine.js"></script>
+<script src="/js/engine/currentChordEngine.js"></script>
+<script src="/js/ui/pianoKeyboard.js"></script>
+<script src="/js/audio/playbackClock.js"></script>
+<script src="/js/ui/beginnerPianoLearningRenderer.js"></script>
+
+<script>
+    'use strict';
+
+    // Sample progression: C (0-2s) -> G (2-4s) -> Am (4-6s) -> F (6-8s)
+    const SAMPLE_TIMELINE = {
+        beginner_chords: [
+            { chordName: 'C', startTime: 0.0, endTime: 2.0 },
+            { chordName: 'G', startTime: 2.0, endTime: 4.0 },
+            { chordName: 'Am', startTime: 4.0, endTime: 6.0 },
+            { chordName: 'F', startTime: 6.0, endTime: 8.0 }
+        ]
+    };
+
+    let clock = null;
+    let chordEngine = null;
+    let learningRenderer = null;
+
+    window.onload = () => {
+        clock = new PlaybackClock({ duration: 8.0 });
+        chordEngine = new CurrentChordEngine(clock);
+        chordEngine.loadTimeline(SAMPLE_TIMELINE);
+
+        learningRenderer = new BeginnerPianoLearningRenderer({
+            container: 'learning-renderer-root',
+            clock: clock,
+            chordEngine: chordEngine,
+            fingeringEngine: PianoFingeringEngine,
+            transitionEngine: ChordTransitionEngine
+        });
+
+        clock.subscribe(snap => {
+            document.getElementById('val-cur-time').textContent = BeginnerPianoLearningRenderer.fmtTime(snap.currentTime);
+            document.getElementById('seek-slider').value = snap.currentTime;
+            
+            const playBtn = document.getElementById('btn-play-pause');
+            if (snap.state === 'PLAYING') {
+                playBtn.textContent = 'Pause ❚❚';
+            } else {
+                playBtn.textContent = 'Play ▶';
+            }
+        });
+    };
+
+    function togglePlay() {
+        if (!clock) return;
+        if (clock.state === 'PLAYING') {
+            clock.pause();
+        } else {
+            clock.play();
+        }
+    }
+
+    function handleStop() {
+        if (clock) clock.stop();
+    }
+
+    function handleRestart() {
+        if (clock) {
+            clock.seek(0);
+            clock.play();
+        }
+    }
+
+    function handleSeek(val) {
+        if (clock) clock.seek(parseFloat(val));
+    }
+
+    function setSpeed(rate) {
+        if (!clock) return;
+        clock.setPlaybackRate(rate);
+        document.querySelectorAll('.ctrl-btn-group button').forEach(b => {
+            if (b.id.startsWith('btn-spd-')) b.classList.remove('active-rate');
+        });
+        if (rate === 1.0) document.getElementById('btn-spd-1').classList.add('active-rate');
+        if (rate === 0.75) document.getElementById('btn-spd-075').classList.add('active-rate');
+        if (rate === 0.5) document.getElementById('btn-spd-05').classList.add('active-rate');
+    }
+</script>
+
+</body>
+</html>

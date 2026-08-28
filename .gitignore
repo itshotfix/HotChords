@@ -63,9 +63,15 @@ hotchords_stems/
 tmp/
 temp/
 .cache/
+.pytest_cache/
+*.zip
+
+# Node modules
+node_modules/
 
 # Cursor / agent IDE directories
 .agents/
+
 
 # PyTorch model cache (Demucs downloads these automatically)
 # Located in ~/.cache/torch — not in project dir, no action needed.

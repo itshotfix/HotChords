@@ -33,12 +33,18 @@ class AnalysisResult(BaseModel):
     scale_notes: List[int]
     chords: List[ChordInfo]
     unique_chords: List[str]
-    simplified_map: Dict[str, str]
     chord_data: Dict[str, ChordData]
     roman_numerals: Dict[str, str]
-    sections: List[SectionInfo]
+    simplified_map: Optional[Dict[str, str]] = None
+    sections: Optional[List[SectionInfo]] = None
+    beginner_chords: Optional[List[ChordInfo]] = None
+    unique_beginner_chords: Optional[List[str]] = None
+    easy_key: Optional[str] = None
+    easy_key_full: Optional[str] = None
+    transpose_offset: Optional[int] = 0
 
 class AnalysisResponse(BaseModel):
     ready: bool
     data: Optional[AnalysisResult] = None
     error: Optional[str] = None
+

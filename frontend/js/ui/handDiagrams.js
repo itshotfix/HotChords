@@ -1,7 +1,7 @@
 /**
  * handDiagrams.js
- * Realistic SVG hand diagrams V3 (Line-art style).
- * Fixed large size, visible palm, individual finger groups.
+ * Realistic SVG hand diagrams (Line-art + Animated Finger Pads).
+ * Large size, visible palm, individual finger groups with glowing active dots.
  */
 
 const HandDiagrams = {
@@ -9,47 +9,46 @@ const HandDiagrams = {
         const isRH = handType === 'RH';
         const prefix = isRH ? 'rh' : 'lh';
         
-        // Larger, more realistic line-art style
         // 1=Thumb, 2=Index, 3=Middle, 4=Ring, 5=Pinky
         return `
-        <svg viewBox="0 0 200 220" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg" class="hand-svg" ${!isRH ? 'style="transform: scaleX(-1);"' : ''}>
-            <g class="hand-body" fill="none" stroke="#D2D2D7" stroke-width="1.5">
-                <!-- Wrist and Palm Outline -->
-                <path d="M60,200 C60,215 140,215 140,200 L150,150 C165,110 140,80 120,80 L80,80 C60,80 35,110 50,150 Z" fill="#FFFFFF" />
+        <svg viewBox="0 0 200 220" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" class="hand-svg" ${!isRH ? 'style="transform: scaleX(-1);"' : ''}>
+            <!-- Wrist and Palm Outline -->
+            <g class="hand-body" fill="none" stroke="#D2D2D7" stroke-width="2">
+                <path d="M60,200 C60,215 140,215 140,200 L150,140 C165,100 140,75 120,75 L80,75 C60,75 35,100 50,140 Z" fill="#FAFAFA" stroke="#D2D2D7" />
                 
                 <!-- Finger 1 (Thumb) -->
-                <g id="${prefix}-finger-1" class="hand-finger">
-                    <path d="M55,140 C30,140 20,120 25,100 L35,80 C40,70 55,75 50,95 Z" fill="#FFFFFF" />
-                    <circle id="${prefix}-finger-dot-1" cx="35" cy="98" r="12" fill="white" opacity="0" />
-                    <text id="${prefix}-finger-num-1" class="hand-finger-num" x="35" y="103" text-anchor="middle" font-size="14" font-weight="800" fill="#1D1D1F" ${!isRH ? 'style="transform: scaleX(-1); transform-origin: 35px 103px;"' : ''}>1</text>
+                <g id="${prefix}-finger-1" class="hand-finger" style="transition: transform 0.15s ease, fill 0.15s ease;">
+                    <path d="M55,135 C30,135 20,115 25,95 L35,75 C40,65 55,70 50,90 Z" fill="#FFFFFF" stroke="#D2D2D7" />
+                    <circle id="${prefix}-finger-dot-1" cx="35" cy="90" r="14" fill="#E5E5EA" stroke="#D2D2D7" stroke-width="1.5" />
+                    <text id="${prefix}-finger-num-1" class="hand-finger-num" x="35" y="95" text-anchor="middle" font-size="14" font-weight="800" fill="#1D1D1F" ${!isRH ? 'style="transform: scaleX(-1); transform-origin: 35px 95px;"' : ''}>1</text>
                 </g>
 
                 <!-- Finger 2 (Index) -->
-                <g id="${prefix}-finger-2" class="hand-finger">
-                    <path d="M62,80 L62,25 C62,15 82,15 82,25 L82,80" fill="#FFFFFF" />
-                    <circle id="${prefix}-finger-dot-2" cx="72" cy="38" r="12" fill="white" opacity="0" />
-                    <text id="${prefix}-finger-num-2" class="hand-finger-num" x="72" y="43" text-anchor="middle" font-size="14" font-weight="800" fill="#1D1D1F" ${!isRH ? 'style="transform: scaleX(-1); transform-origin: 72px 43px;"' : ''}>2</text>
+                <g id="${prefix}-finger-2" class="hand-finger" style="transition: transform 0.15s ease, fill 0.15s ease;">
+                    <path d="M60,75 L60,22 C60,12 82,12 82,22 L82,75" fill="#FFFFFF" stroke="#D2D2D7" />
+                    <circle id="${prefix}-finger-dot-2" cx="71" cy="34" r="14" fill="#E5E5EA" stroke="#D2D2D7" stroke-width="1.5" />
+                    <text id="${prefix}-finger-num-2" class="hand-finger-num" x="71" y="39" text-anchor="middle" font-size="14" font-weight="800" fill="#1D1D1F" ${!isRH ? 'style="transform: scaleX(-1); transform-origin: 71px 39px;"' : ''}>2</text>
                 </g>
 
                 <!-- Finger 3 (Middle) -->
-                <g id="${prefix}-finger-3" class="hand-finger">
-                    <path d="M85,80 L85,15 C85,5 105,5 105,15 L105,80" fill="#FFFFFF" />
-                    <circle id="${prefix}-finger-dot-3" cx="95" cy="28" r="12" fill="white" opacity="0" />
-                    <text id="${prefix}-finger-num-3" class="hand-finger-num" x="95" y="33" text-anchor="middle" font-size="14" font-weight="800" fill="#1D1D1F" ${!isRH ? 'style="transform: scaleX(-1); transform-origin: 95px 33px;"' : ''}>3</text>
+                <g id="${prefix}-finger-3" class="hand-finger" style="transition: transform 0.15s ease, fill 0.15s ease;">
+                    <path d="M84,75 L84,14 C84,4 106,4 106,14 L106,75" fill="#FFFFFF" stroke="#D2D2D7" />
+                    <circle id="${prefix}-finger-dot-3" cx="95" cy="26" r="14" fill="#E5E5EA" stroke="#D2D2D7" stroke-width="1.5" />
+                    <text id="${prefix}-finger-num-3" class="hand-finger-num" x="95" y="31" text-anchor="middle" font-size="14" font-weight="800" fill="#1D1D1F" ${!isRH ? 'style="transform: scaleX(-1); transform-origin: 95px 31px;"' : ''}>3</text>
                 </g>
 
                 <!-- Finger 4 (Ring) -->
-                <g id="${prefix}-finger-4" class="hand-finger">
-                    <path d="M108,80 L108,25 C108,15 128,15 128,25 L128,80" fill="#FFFFFF" />
-                    <circle id="${prefix}-finger-dot-4" cx="118" cy="38" r="12" fill="white" opacity="0" />
-                    <text id="${prefix}-finger-num-4" class="hand-finger-num" x="118" y="43" text-anchor="middle" font-size="14" font-weight="800" fill="#1D1D1F" ${!isRH ? 'style="transform: scaleX(-1); transform-origin: 118px 43px;"' : ''}>4</text>
+                <g id="${prefix}-finger-4" class="hand-finger" style="transition: transform 0.15s ease, fill 0.15s ease;">
+                    <path d="M108,75 L108,22 C108,12 130,12 130,22 L130,75" fill="#FFFFFF" stroke="#D2D2D7" />
+                    <circle id="${prefix}-finger-dot-4" cx="119" cy="34" r="14" fill="#E5E5EA" stroke="#D2D2D7" stroke-width="1.5" />
+                    <text id="${prefix}-finger-num-4" class="hand-finger-num" x="119" y="39" text-anchor="middle" font-size="14" font-weight="800" fill="#1D1D1F" ${!isRH ? 'style="transform: scaleX(-1); transform-origin: 119px 39px;"' : ''}>4</text>
                 </g>
 
                 <!-- Finger 5 (Pinky) -->
-                <g id="${prefix}-finger-5" class="hand-finger">
-                    <path d="M131,90 L131,45 C131,35 147,35 147,45 L147,90" fill="#FFFFFF" />
-                    <circle id="${prefix}-finger-dot-5" cx="139" cy="55" r="11" fill="white" opacity="0" />
-                    <text id="${prefix}-finger-num-5" class="hand-finger-num" x="139" y="60" text-anchor="middle" font-size="13" font-weight="800" fill="#1D1D1F" ${!isRH ? 'style="transform: scaleX(-1); transform-origin: 139px 60px;"' : ''}>5</text>
+                <g id="${prefix}-finger-5" class="hand-finger" style="transition: transform 0.15s ease, fill 0.15s ease;">
+                    <path d="M132,85 L132,40 C132,30 150,30 150,40 L150,85" fill="#FFFFFF" stroke="#D2D2D7" />
+                    <circle id="${prefix}-finger-dot-5" cx="141" cy="50" r="13" fill="#E5E5EA" stroke="#D2D2D7" stroke-width="1.5" />
+                    <text id="${prefix}-finger-num-5" class="hand-finger-num" x="141" y="55" text-anchor="middle" font-size="13" font-weight="800" fill="#1D1D1F" ${!isRH ? 'style="transform: scaleX(-1); transform-origin: 141px 55px;"' : ''}>5</text>
                 </g>
             </g>
         </svg>`;
@@ -57,3 +56,4 @@ const HandDiagrams = {
 };
 
 window.HandDiagrams = HandDiagrams;
+

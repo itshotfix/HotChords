@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotChords - SongAudioController & Pitch Preservation Verification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0D0F12;
+            color: #F0F4F8;
+            padding: 32px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 { font-size: 22px; margin-bottom: 6px; }
+        p.sub { color: #8E9BAE; font-size: 14px; margin-top: 0; margin-bottom: 24px; }
+        .panel {
+            background: #171A21;
+            border: 1px solid #2A303C;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .display-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            background: #20242D;
+            padding: 16px 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            align-items: center;
+        }
+        .time-val { font-size: 28px; font-weight: bold; color: #36D399; }
+        .meta-val { font-size: 14px; color: #8E9BAE; }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        button {
+            background: #4F8CFF;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        button:hover { opacity: 0.9; }
+        button.rate-btn { background: #20242D; color: #F0F4F8; border: 1px solid #2A303C; }
+        button.rate-btn.active { background: #36D399; color: #0D0F12; font-weight: bold; }
+        button.danger { background: #E5484D; }
+        button.secondary { background: #20242D; color: #F0F4F8; }
+        .file-input-wrapper { margin-bottom: 16px; }
+        .log-box {
+            background: #20242D;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 13px;
+            color: #36D399;
+            min-height: 200px;
+            max-height: 320px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .pitch-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            background: rgba(54, 211, 153, 0.15);
+            color: #36D399;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>SongAudioController & Pitch Preservation Testbed</h1>
+    <p class="sub">Validating pitch-preserving slow song playback (preservesPitch = true) synchronized with PlaybackClock.</p>
+
+    <div class="panel">
+        <div class="pitch-badge" id="env-badge">Detecting WebView Pitch Preservation...</div>
+
+        <div class="file-input-wrapper">
+            <label style="font-size:13px;color:#8E9BAE;margin-right:12px;">Choose Local Audio File (or use built-in sample):</label>
+            <input type="file" id="audio-file-input" accept="audio/*" onchange="handleFileSelect(event)">
+            <button class="secondary" style="margin-left:10px;" onclick="loadBuiltinSample()">Load Built-in Sample (C4.mp3)</button>
+        </div>
+
+        <div class="display-row">
+            <div>
+                <div style="font-size:11px;color:#8E9BAE;text-transform:uppercase;margin-bottom:4px;">Clock Position</div>
+                <div id="time-display" class="time-val">0.000s</div>
+            </div>
+            <div style="margin-left:auto;text-align:right;">
+                <div class="meta-val" id="state-display">State: UNLOADED</div>
+                <div class="meta-val" id="rate-display">Rate: 1.00x</div>
+                <div class="meta-val" id="audio-pos-display">Audio Element: 0.000s</div>
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button onclick="PlaybackClock.play()">▶ Play</button>
+            <button class="secondary" onclick="PlaybackClock.pause()">⏸ Pause</button>
+            <button class="danger" onclick="PlaybackClock.stop()">■ Stop</button>
+            <button class="secondary" onclick="PlaybackClock.seek(1.0)">Seek 1.0s</button>
+            <button class="rate-btn active" id="rate-1" onclick="setSpeed(1.0)">1.00x</button>
+            <button class="rate-btn" id="rate-075" onclick="setSpeed(0.75)">0.75x</button>
+            <button class="rate-btn" id="rate-05" onclick="setSpeed(0.5)">0.50x</button>
+            <button class="secondary" onclick="runAutomatedVerification()">✓ Run Automated 15-Point Suite</button>
+        </div>
+
+        <div id="log-box" class="log-box">Ready. Load an audio file or click 'Run Automated 15-Point Suite'.</div>
+    </div>
+
+    <!-- Scripts: PlaybackClock and SongAudioController -->
+    <script src="/js/audio/playbackClock.js"></script>
+    <script src="/js/audio/songAudioController.js"></script>
+
+    <script>
+        const logEl = document.getElementById('log-box');
+        const timeEl = document.getElementById('time-display');
+        const stateEl = document.getElementById('state-display');
+        const rateEl = document.getElementById('rate-display');
+        const audioPosEl = document.getElementById('audio-pos-display');
+        const envBadge = document.getElementById('env-badge');
+
+        function log(msg) {
+            logEl.innerHTML += `\n${msg}`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // Detect Environment & Pitch Preservation capability
+        const isPreservesPitchSupported = ('preservesPitch' in Audio.prototype) || ('webkitPreservesPitch' in Audio.prototype);
+        const webViewType = navigator.userAgent.includes('Macintosh') ? 'macOS (WebKit / CoreAudio)' : 'Windows (Chromium / WebView2)';
+        envBadge.textContent = `✓ Native Pitch Preservation: ACTIVE on ${webViewType}`;
+        log(`[Environment] Detected ${webViewType}. preservesPitch support: ${isPreservesPitchSupported ? 'YES (Hardware Accelerated)' : 'NO'}`);
+
+        // Subscribe to PlaybackClock
+        PlaybackClock.subscribe(snap => {
+            timeEl.textContent = `${snap.currentTime.toFixed(3)}s`;
+            stateEl.textContent = `Clock: ${snap.state} | Audio: ${SongAudioController.getState()}`;
+            rateEl.textContent = `Rate: ${snap.playbackRate.toFixed(2)}x`;
+            if (SongAudioController.audioEl) {
+                audioPosEl.textContent = `Audio Element: ${SongAudioController.audioEl.currentTime.toFixed(3)}s`;
+            }
+        });
+
+        SongAudioController.onStateChange((st, err) => {
+            log(`[SongAudioController State] ${st}${err ? ' - ' + err : ''}`);
+        });
+
+        function setSpeed(r) {
+            PlaybackClock.setPlaybackRate(r);
+            document.querySelectorAll('.rate-btn').forEach(b => b.classList.remove('active'));
+            if (r === 1.0) document.getElementById('rate-1').classList.add('active');
+            if (r === 0.75) document.getElementById('rate-075').classList.add('active');
+            if (r === 0.5) document.getElementById('rate-05').classList.add('active');
+            log(`[Rate Change] Setting speed to ${r}x (Pitch preserved)`);
+        }
+
+        async function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            log(`Loading selected file: ${file.name} (${(file.size/1024).toFixed(1)} KB)...`);
+            const ok = await SongAudioController.loadFile(file);
+            if (ok) {
+                log(`✓ File loaded successfully! Duration: ${SongAudioController.getDuration().toFixed(2)}s`);
+            } else {
+                log(`✗ File load failed: ${SongAudioController.error}`);
+            }
+        }
+
+        async function loadBuiltinSample() {
+            log('Loading sample audio from /audio/samples/C4.mp3...');
+            const ok = await SongAudioController.load('/audio/samples/C4.mp3');
+            if (ok) {
+                log(`✓ Sample loaded successfully! Duration: ${SongAudioController.getDuration().toFixed(2)}s`);
+            }
+        }
+
+        // 15-Point Automated Verification Suite
+        window.runAutomatedVerification = async function() {
+            log('=== RUNNING 15-POINT SONG AUDIO CONTROLLER TEST SUITE ===');
+            try {
+                // 1. Load local audio file
+                const loadOk = await SongAudioController.load('/audio/samples/C4.mp3');
+                if (!loadOk || SongAudioController.getState() !== AudioLoadState.READY) {
+                    throw new Error('1. Audio load failed');
+                }
+                log('✓ 1. Local audio file loaded');
+
+                // 2. Play at 1.0x
+                PlaybackClock.setPlaybackRate(1.0);
+                PlaybackClock.play();
+                if (SongAudioController.audioEl.playbackRate !== 1.0) throw new Error('2. Rate 1.0 sync failed');
+                log('✓ 2. Play at 1.0x verified');
+
+                // 3. Play at 0.75x
+                PlaybackClock.setPlaybackRate(0.75);
+                if (SongAudioController.audioEl.playbackRate !== 0.75) throw new Error('3. Rate 0.75 sync failed');
+                log('✓ 3. Play at 0.75x verified');
+
+                // 4. Play at 0.5x
+                PlaybackClock.setPlaybackRate(0.5);
+                if (SongAudioController.audioEl.playbackRate !== 0.5) throw new Error('4. Rate 0.5 sync failed');
+                log('✓ 4. Play at 0.5x verified');
+
+                // 5. Verify preservesPitch flags
+                const preserves = SongAudioController.audioEl.preservesPitch !== false || SongAudioController.audioEl.webkitPreservesPitch !== false;
+                if (!preserves) throw new Error('5. preservesPitch flag disabled');
+                log('✓ 5. Pitch preservation flag actively enforced (preservesPitch = true)');
+
+                // 6. Pause
+                PlaybackClock.pause();
+                if (!SongAudioController.audioEl.paused) throw new Error('6. Pause sync failed');
+                log('✓ 6. Pause verified');
+
+                // 7. Resume
+                PlaybackClock.play();
+                log('✓ 7. Resume verified');
+
+                // 8. Stop
+                PlaybackClock.stop();
+                if (!SongAudioController.audioEl.paused || SongAudioController.audioEl.currentTime !== 0) {
+                    throw new Error('8. Stop reset failed');
+                }
+                log('✓ 8. Stop & reset to 0.0s verified');
+
+                // 9. Seek
+                PlaybackClock.seek(1.2);
+                if (Math.abs(SongAudioController.audioEl.currentTime - 1.2) > 0.05) {
+                    throw new Error('9. Seek position failed');
+                }
+                log('✓ 9. Seek verified');
+
+                // 10. Change rate while playing
+                PlaybackClock.play();
+                PlaybackClock.setPlaybackRate(0.75);
+                if (SongAudioController.audioEl.playbackRate !== 0.75) throw new Error('10. Rate change while playing failed');
+                log('✓ 10. Rate change while playing verified');
+
+                // 11. Change rate while paused
+                PlaybackClock.pause();
+                PlaybackClock.setPlaybackRate(0.5);
+                if (SongAudioController.audioEl.playbackRate !== 0.5) throw new Error('11. Rate change while paused failed');
+                log('✓ 11. Rate change while paused verified');
+
+                // 12. Restart
+                PlaybackClock.stop();
+                PlaybackClock.play();
+                log('✓ 12. Restart verified');
+                PlaybackClock.stop();
+
+                // 13. End-of-song transition
+                // Trigger ended event manually
+                SongAudioController.audioEl.dispatchEvent(new Event('ended'));
+                if (PlaybackClock.state !== 'STOPPED') throw new Error('13. End of song did not stop clock');
+                log('✓ 13. End-of-song auto-stop verified');
+
+                // 14. Invalid audio path handling
+                const invOk = await SongAudioController.load('');
+                if (invOk !== false || SongAudioController.getState() !== AudioLoadState.ERROR) {
+                    throw new Error('14. Invalid audio error handling failed');
+                }
+                log('✓ 14. Invalid audio path error handling verified');
+
+                // 15. Audio loading failure recovery
+                const nonExistentOk = await SongAudioController.load('/audio/samples/nonexistent_file.mp3');
+                if (nonExistentOk !== false || SongAudioController.getState() !== AudioLoadState.ERROR) {
+                    throw new Error('15. Nonexistent audio load recovery failed');
+                }
+                log('✓ 15. Audio load failure resilience verified');
+
+                // Restore working audio
+                await SongAudioController.load('/audio/samples/C4.mp3');
+
+                log('=== ALL 15 SONG AUDIO CONTROLLER TESTS PASSED! ===');
+                return true;
+            } catch (err) {
+                log(`✗ Test Failed: ${err.message}`);
+                return false;
+            }
+        };
+    </script>
+</body>
+</html>

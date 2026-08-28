@@ -11,6 +11,7 @@ scipy>=1.13.0
 torch>=2.0.0
 demucs>=4.0.0
 
+
 # FFmpeg (bundled binary — no manual install required)
 imageio-ffmpeg>=0.4.9
 

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotChords - PianoPlaybackService Verification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0D0F12;
+            color: #F0F4F8;
+            padding: 32px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { font-size: 22px; margin-bottom: 8px; }
+        p { color: #8E9BAE; font-size: 14px; margin-top: 0; }
+        .panel {
+            background: #171A21;
+            border: 1px solid #2A303C;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        button {
+            background: #4F8CFF;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        button:hover { opacity: 0.9; }
+        button.danger { background: #E5484D; }
+        button.secondary { background: #20242D; color: #F0F4F8; }
+        .log-box {
+            background: #20242D;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 13px;
+            color: #36D399;
+            min-height: 180px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #20242D;
+            color: #FBBD23;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>PianoPlaybackService Verification Testbed</h1>
+    <p>Isolated verification for Tone.js / Web Audio sample playback service.</p>
+
+    <div class="panel">
+        <div id="service-status" class="status-badge">Status: uninitialized</div>
+
+        <div class="btn-row">
+            <button onclick="runInit()">1. Initialize Service</button>
+            <button class="secondary" onclick="runPlayNote()">2. Play Note (C4, Vel 0.8)</button>
+            <button class="secondary" onclick="runPlayChord()">3. Play Chord (C Major Triad)</button>
+            <button class="secondary" onclick="runProgression()">4. Play Progression (C-G-Am-F)</button>
+            <button class="danger" onclick="runStop()">Stop All</button>
+            <button class="secondary" onclick="runDispose()">Dispose</button>
+        </div>
+
+        <div id="test-log" class="log-box">Ready. Click '1. Initialize Service' or run automated suite.</div>
+    </div>
+
+    <!-- Tone.js and PianoPlaybackService -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="/js/audio/pianoPlaybackService.js"></script>
+
+    <script>
+        const logEl = document.getElementById('test-log');
+        const statusEl = document.getElementById('service-status');
+
+        function log(msg) {
+            logEl.innerHTML += `\n${msg}`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        PianoPlaybackService.onStateChange((state, err) => {
+            statusEl.textContent = `Status: ${state}` + (err ? ` (${err})` : '');
+            statusEl.style.color = state === 'ready' ? '#36D399' : (state === 'error' ? '#E5484D' : '#FBBD23');
+            log(`[State Event] PianoPlaybackService -> ${state}`);
+        });
+
+        async function runInit() {
+            log('Initializing PianoPlaybackService...');
+            await PianoPlaybackService.initialize();
+            log('Service initialized successfully!');
+        }
+
+        function runPlayNote() {
+            log('Playing Middle C (C4 / MIDI 60, Vel 0.85, Dur 1.5s)...');
+            PianoPlaybackService.playNote(60, 0.85, 1.5);
+        }
+
+        function runPlayChord() {
+            log('Playing C Major Triad [C4, E4, G4] simultaneously...');
+            PianoPlaybackService.playChord([60, 64, 67], 0.8, 2.0);
+        }
+
+        function runProgression() {
+            log('Scheduling progression: C -> G -> Am -> F with 1.25s intervals...');
+            const now = window.Tone ? window.Tone.now() : (PianoPlaybackService.audioCtx ? PianoPlaybackService.audioCtx.currentTime : 0);
+            
+            PianoPlaybackService.playChord([60, 64, 67], 0.85, 1.2, now + 0.05);   // C
+            PianoPlaybackService.playChord([55, 59, 62], 0.75, 1.2, now + 1.30);   // G
+            PianoPlaybackService.playChord([57, 60, 64], 0.90, 1.2, now + 2.55);   // Am
+            PianoPlaybackService.playChord([53, 57, 60], 0.80, 1.4, now + 3.80);   // F
+        }
+
+        function runStop() {
+            log('Stopping all active voices & cancelling scheduled events...');
+            PianoPlaybackService.stopAll();
+        }
+
+        function runDispose() {
+            log('Disposing PianoPlaybackService...');
+            PianoPlaybackService.dispose();
+            log('Disposed.');
+        }
+
+        // Automated validation runner for test harness
+        window.runAutomatedSelfTest = async function() {
+            log('=== STARTING AUTOMATED SELF TEST ===');
+            try {
+                // 1. Conversion utility check
+                if (PianoPlaybackServiceClass.midiToNoteName(60) !== 'C4') throw new Error('midiToNoteName failed');
+                if (PianoPlaybackServiceClass.noteNameToMidi('C4') !== 60) throw new Error('noteNameToMidi failed');
+                if (PianoPlaybackServiceClass.pitchClassToMidi(0, 4) !== 60) throw new Error('pitchClassToMidi failed');
+                log('✓ Note conversion utilities passed');
+
+                // 2. Initialize
+                await PianoPlaybackService.initialize();
+                if (PianoPlaybackService.getState() !== 'ready') throw new Error('State is not ready');
+                log('✓ Service initialization passed');
+
+                // 3. Play note & chord API test
+                PianoPlaybackService.playNote(60, 0.8, 0.5);
+                PianoPlaybackService.playChord([60, 64, 67], 0.8, 0.5);
+                log('✓ Note & Chord triggering passed');
+
+                // 4. Stop
+                PianoPlaybackService.stopAll();
+                log('✓ stopAll() passed');
+
+                // 5. Repeated init check
+                await PianoPlaybackService.initialize();
+                log('✓ Repeated initialization safety passed');
+
+                // 6. Dispose check
+                PianoPlaybackService.dispose();
+                if (PianoPlaybackService.getState() !== 'uninitialized') throw new Error('Dispose state failed');
+                log('✓ Disposal and cleanup passed');
+
+                log('=== ALL SERVICE TESTS PASSED SUCCESSFULLY! ===');
+                return true;
+            } catch (err) {
+                log(`✗ Test Failed: ${err.message}`);
+                return false;
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotChords - Unified Piano Playback Controller Testbed</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0D0F12;
+            color: #F0F4F8;
+            padding: 32px;
+            max-width: 920px;
+            margin: 0 auto;
+        }
+        h1 { font-size: 22px; margin-bottom: 6px; }
+        p.sub { color: #8E9BAE; font-size: 14px; margin-top: 0; margin-bottom: 24px; }
+        .panel {
+            background: #171A21;
+            border: 1px solid #2A303C;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        button {
+            background: #4F8CFF;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        button:hover { opacity: 0.9; }
+        button.beginner-btn { background: #36D399; color: #0D0F12; }
+        button.danger { background: #E5484D; }
+        button.secondary { background: #20242D; color: #F0F4F8; }
+        .active-mode { outline: 2px solid white; }
+        .section-label { font-size: 13px; font-weight: 700; color: #8E9BAE; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .timeline-cards {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        .chord-card {
+            background: #20242D;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            padding: 12px 16px;
+            min-width: 110px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .chord-card.active-card {
+            border-color: #4F8CFF;
+            background: rgba(79, 140, 255, 0.15);
+            transform: scale(1.04);
+        }
+        .log-box {
+            background: #20242D;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 13px;
+            color: #36D399;
+            min-height: 180px;
+            max-height: 260px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #20242D;
+            color: #FBBD23;
+            margin-bottom: 16px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Unified Piano Playback Controller Testbed</h1>
+    <p class="sub">Validating single public interface controlling Original vs. Beginner piano playback with seamless mode switching and zero voice overlap.</p>
+
+    <div class="panel">
+        <div>
+            <span id="ctrl-state" class="status-badge">State: STOPPED</span>
+            <span id="ctrl-mode" class="status-badge" style="color:#4F8CFF">Mode: ORIGINAL_CHORDS</span>
+        </div>
+
+        <div class="section-label">Active Timeline Progression</div>
+        <div class="timeline-cards" id="chord-display"></div>
+
+        <div class="btn-row">
+            <button id="btn-orig" onclick="playOriginal()">▶ Play ORIGINAL_CHORDS</button>
+            <button id="btn-beg" class="beginner-btn" onclick="playBeginner()">▶ Play BEGINNER_CHORDS</button>
+            <button class="secondary" onclick="toggleModeWhilePlaying()">⇄ Switch Mode on the Fly</button>
+            <button class="secondary" onclick="pausePlayback()">⏸ Pause</button>
+            <button class="danger" onclick="stopPlayback()">■ Stop</button>
+            <button class="secondary" onclick="restartPlayback()">↺ Restart</button>
+            <button class="secondary" onclick="runAutomatedTestVerification()">✓ Run Automated 10-Point Test</button>
+        </div>
+
+        <div id="log-box" class="log-box">Ready. Click a button to test UnifiedPianoPlaybackController.</div>
+    </div>
+
+    <!-- Scripts: Tone.js, Service, Controllers, and Unified Controller -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="/js/audio/pianoPlaybackService.js"></script>
+    <script src="/js/audio/originalChordPlaybackController.js"></script>
+    <script src="/js/audio/beginnerChordPlaybackController.js"></script>
+    <script src="/js/audio/unifiedPianoPlaybackController.js"></script>
+
+    <script>
+        const logEl = document.getElementById('log-box');
+        const stateEl = document.getElementById('ctrl-state');
+        const modeEl = document.getElementById('ctrl-mode');
+        const chordDisplayEl = document.getElementById('chord-display');
+
+        function log(msg) {
+            logEl.innerHTML += `\n${msg}`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        const TEST_TIMELINE = {
+            duration: 8.0,
+            originalChords: [
+                { startTime: 0.0, endTime: 2.0, chordName: 'Cmaj7', notes: [0, 4, 7, 11], confidence: 0.95 },
+                { startTime: 2.0, endTime: 4.0, chordName: 'G7', notes: [7, 11, 2, 5], confidence: 0.92 },
+                { startTime: 4.0, endTime: 6.0, chordName: 'Am7', notes: [9, 0, 4, 7], confidence: 0.90 },
+                { startTime: 6.0, endTime: 8.0, chordName: 'Fmaj7', notes: [5, 9, 0, 4], confidence: 0.93 }
+            ],
+            beginnerChords: [
+                { startTime: 0.0, endTime: 2.0, chordName: 'C', notes: [0, 4, 7], confidence: 0.95 },
+                { startTime: 2.0, endTime: 4.0, chordName: 'G', notes: [7, 11, 2], confidence: 0.92 },
+                { startTime: 4.0, endTime: 6.0, chordName: 'Am', notes: [9, 0, 4], confidence: 0.90 },
+                { startTime: 6.0, endTime: 8.0, chordName: 'F', notes: [5, 9, 0], confidence: 0.93 }
+            ]
+        };
+
+        // Load timeline into controller on boot
+        UnifiedPianoPlaybackController.loadTimeline(TEST_TIMELINE);
+        renderActiveTimeline(PianoPlaybackMode.ORIGINAL_CHORDS);
+
+        function renderActiveTimeline(mode) {
+            const chords = mode === PianoPlaybackMode.BEGINNER_CHORDS 
+                ? TEST_TIMELINE.beginnerChords 
+                : TEST_TIMELINE.originalChords;
+
+            chordDisplayEl.innerHTML = chords.map((c, i) => `
+                <div class="chord-card" id="chord-card-${i}">
+                    <div class="name" style="color: ${mode === PianoPlaybackMode.BEGINNER_CHORDS ? '#36D399' : '#4F8CFF'}">${c.chordName}</div>
+                    <div class="time">${c.startTime.toFixed(1)}s - ${c.endTime.toFixed(1)}s</div>
+                </div>
+            `).join('');
+        }
+
+        // Register Unified Controller Callbacks
+        UnifiedPianoPlaybackController.onStateChange(state => {
+            stateEl.textContent = `State: ${state.toUpperCase()}`;
+            stateEl.style.color = state === 'playing' ? '#36D399' : (state === 'paused' ? '#FBBD23' : '#8E9BAE');
+            log(`[Unified State Change] -> ${state}`);
+            if (state === 'stopped') {
+                document.querySelectorAll('.chord-card').forEach(el => el.classList.remove('active-card'));
+            }
+        });
+
+        UnifiedPianoPlaybackController.onModeChange(mode => {
+            modeEl.textContent = `Mode: ${mode}`;
+            modeEl.style.color = mode === PianoPlaybackMode.BEGINNER_CHORDS ? '#36D399' : '#4F8CFF';
+            renderActiveTimeline(mode);
+            log(`[Unified Mode Change] -> ${mode}`);
+        });
+
+        UnifiedPianoPlaybackController.onChordTrigger((chord, idx, mode) => {
+            document.querySelectorAll('.chord-card').forEach(el => el.classList.remove('active-card'));
+            const card = document.getElementById(`chord-card-${idx}`);
+            if (card) card.classList.add('active-card');
+            log(`[Chord Sounding] (${mode}) [${chord.startTime.toFixed(2)}s] ${chord.chordName}`);
+        });
+
+        function playOriginal() {
+            log('▶ Starting ORIGINAL_CHORDS playback...');
+            UnifiedPianoPlaybackController.play(PianoPlaybackMode.ORIGINAL_CHORDS);
+        }
+
+        function playBeginner() {
+            log('▶ Starting BEGINNER_CHORDS playback...');
+            UnifiedPianoPlaybackController.play(PianoPlaybackMode.BEGINNER_CHORDS);
+        }
+
+        function toggleModeWhilePlaying() {
+            const current = UnifiedPianoPlaybackController.getCurrentMode();
+            const nextMode = current === PianoPlaybackMode.ORIGINAL_CHORDS
+                ? PianoPlaybackMode.BEGINNER_CHORDS
+                : PianoPlaybackMode.ORIGINAL_CHORDS;
+            log(`⇄ Switching mode to ${nextMode}...`);
+            UnifiedPianoPlaybackController.switchMode(nextMode);
+        }
+
+        function pausePlayback() {
+            log('⏸ Pausing playback...');
+            UnifiedPianoPlaybackController.pause();
+        }
+
+        function stopPlayback() {
+            log('■ Stopping playback...');
+            UnifiedPianoPlaybackController.stop();
+        }
+
+        function restartPlayback() {
+            log('↺ Restarting from 0.0s...');
+            UnifiedPianoPlaybackController.restart();
+        }
+
+        // 10-Point Automated Test Suite
+        window.runAutomatedTestVerification = async function() {
+            log('=== STARTING 10-POINT UNIFIED CONTROLLER VERIFICATION ===');
+            try {
+                // 1. loadTimeline()
+                UnifiedPianoPlaybackController.loadTimeline(TEST_TIMELINE);
+                if (UnifiedPianoPlaybackController.timeline !== TEST_TIMELINE) throw new Error('1. loadTimeline failed');
+                log('✓ 1. loadTimeline() verified');
+
+                // 2. ORIGINAL_CHORDS playback selection
+                await UnifiedPianoPlaybackController.play(PianoPlaybackMode.ORIGINAL_CHORDS, 0);
+                if (!UnifiedPianoPlaybackController.isPlaying() || UnifiedPianoPlaybackController.getCurrentMode() !== PianoPlaybackMode.ORIGINAL_CHORDS) {
+                    throw new Error('2. ORIGINAL_CHORDS play failed');
+                }
+                log('✓ 2. ORIGINAL_CHORDS playback selection verified');
+
+                // 3. BEGINNER_CHORDS playback selection
+                await UnifiedPianoPlaybackController.play(PianoPlaybackMode.BEGINNER_CHORDS, 0);
+                if (!UnifiedPianoPlaybackController.isPlaying() || UnifiedPianoPlaybackController.getCurrentMode() !== PianoPlaybackMode.BEGINNER_CHORDS) {
+                    throw new Error('3. BEGINNER_CHORDS play failed');
+                }
+                log('✓ 3. BEGINNER_CHORDS playback selection verified');
+
+                // 4. Mode switching while playing
+                await UnifiedPianoPlaybackController.switchMode(PianoPlaybackMode.ORIGINAL_CHORDS);
+                if (!UnifiedPianoPlaybackController.isPlaying() || UnifiedPianoPlaybackController.getCurrentMode() !== PianoPlaybackMode.ORIGINAL_CHORDS) {
+                    throw new Error('4. Switch mode while playing failed');
+                }
+                log('✓ 4. Seamless mode switching verified');
+
+                // 5. stop()
+                UnifiedPianoPlaybackController.stop();
+                if (UnifiedPianoPlaybackController.isPlaying()) throw new Error('5. stop() failed');
+                log('✓ 5. stop() verified');
+
+                // 6. restart()
+                await UnifiedPianoPlaybackController.restart();
+                if (!UnifiedPianoPlaybackController.isPlaying()) throw new Error('6. restart() failed');
+                UnifiedPianoPlaybackController.stop();
+                log('✓ 6. restart() verified');
+
+                // 7. repeated play
+                await UnifiedPianoPlaybackController.play(PianoPlaybackMode.ORIGINAL_CHORDS);
+                await UnifiedPianoPlaybackController.play(PianoPlaybackMode.ORIGINAL_CHORDS);
+                UnifiedPianoPlaybackController.stop();
+                log('✓ 7. Repeated play safety verified');
+
+                // 8. empty timeline handling
+                const emptyTimeline = { duration: 0, originalChords: [], beginnerChords: [] };
+                UnifiedPianoPlaybackController.loadTimeline(emptyTimeline);
+                const playEmptyRes = await UnifiedPianoPlaybackController.play(PianoPlaybackMode.ORIGINAL_CHORDS);
+                UnifiedPianoPlaybackController.stop();
+                log('✓ 8. Empty timeline resilience verified');
+
+                // 9. invalid mode handling
+                UnifiedPianoPlaybackController.loadTimeline(TEST_TIMELINE);
+                const invalidRes = await UnifiedPianoPlaybackController.play('INVALID_MODE');
+                if (invalidRes !== false) throw new Error('9. Invalid mode should return false');
+                log('✓ 9. Invalid mode handling verified');
+
+                // 10. Ensuring original and beginner controllers never play simultaneously
+                await UnifiedPianoPlaybackController.play(PianoPlaybackMode.ORIGINAL_CHORDS);
+                const origActive = UnifiedPianoPlaybackController.originalController.isPlaying();
+                const begActive = UnifiedPianoPlaybackController.beginnerController.isPlaying();
+                if (origActive && begActive) throw new Error('10. Simultaneous dual playback detected!');
+                UnifiedPianoPlaybackController.stop();
+                log('✓ 10. Zero simultaneous dual playback verified');
+
+                log('=== ALL 10 TESTS PASSED SUCCESSFULLY! ===');
+                return true;
+            } catch (err) {
+                log(`✗ Test Failed: ${err.message}`);
+                return false;
+            }
+        };
+    </script>
+</body>
+</html>

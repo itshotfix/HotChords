@@ -272,10 +272,11 @@ Respects `prefers-reduced-motion` — immediately skips to final state if set.
     }
   },
   "roman_numerals": { "C": "I", "Am": "vi", "F": "IV", "G": "V" },
-  "beginner_chords": [...],
-  "unique_beginner_chords": [...],
-  "easy_key": "C",
-  "easy_key_full": "C Major",
-  "transpose_offset": 0
-}
 ```
+
+---
+
+## Lyrics & Transcription Reference
+
+For full details on the decoupled lyrics pipeline, vocal separation, ASR, alignment engine, and phased roadmap, see [LYRICS_ARCHITECTURE.md](file:///Volumes/TIKDI/APP%20Development/HotChords%20App/docs/LYRICS_ARCHITECTURE.md).
+

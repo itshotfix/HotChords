@@ -1,0 +1,21 @@
+{
+  "name": "hotchords",
+  "version": "0.2.0",
+  "description": "HotChords — Real-time interactive piano chord learning workstation",
+  "main": "frontend/index.html",
+  "scripts": {
+    "test": "node tests/test_workspace_hands_and_timeline.js && node tests/test_phase_7c_ui_ux.js && node tests/test_phase_8_rearchitecture.js",
+    "validate:songs": "node scripts/validate_workspace_real_songs.js"
+  },
+  "keywords": [
+    "piano",
+    "chords",
+    "music-theory",
+    "audio-analysis"
+  ],
+  "author": "HotChords Team",
+  "license": "MIT",
+  "devDependencies": {
+    "puppeteer-core": "^22.0.0"
+  }
+}

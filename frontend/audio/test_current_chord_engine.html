@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotChords - Current Chord Engine Test</title>
+    <link rel="stylesheet" href="/css/piano.css">
+    <script src="/js/audio/playbackClock.js"></script>
+    <script src="/js/engine/currentChordEngine.js"></script>
+    <style>
+        body { padding: 24px; overflow: auto; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .test-container { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+        .card { background: var(--card); padding: 18px; border-radius: var(--radius-inner); border: 1px solid var(--border-light); }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        .ctrl-btn { padding: 8px 14px; background: #1E293B; color: #F8FAFC; border: 1px solid #334155; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+        .ctrl-btn:hover { background: #334155; }
+        .state-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 12px; }
+        .stat-item { background: #0F172A; padding: 12px; border-radius: 6px; border: 1px solid #1E293B; }
+        .stat-label { font-size: 0.75rem; color: #94A3B8; text-transform: uppercase; margin-bottom: 4px; }
+        .stat-value { font-size: 1.25rem; font-weight: bold; color: #F8FAFC; font-family: monospace; }
+        .approaching-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .appr-true { background: rgba(245, 158, 11, 0.2); color: #F59E0B; border: 1px solid #F59E0B; }
+        .appr-false { background: rgba(100, 116, 139, 0.2); color: #94A3B8; border: 1px solid #64748B; }
+        .test-pass { color: #10B981; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>CurrentChordEngine Interactive Test (Phase 6A)</h1>
+        <p>Deterministic state/query engine mapping PlaybackClock.currentTime to SongTimeline.beginner_chords.</p>
+
+        <div class="card controls">
+            <button class="ctrl-btn" onclick="togglePlay()">Play / Pause</button>
+            <button class="ctrl-btn" onclick="seek(0.5)">Seek 0.5s (C)</button>
+            <button class="ctrl-btn" onclick="seek(1.5)">Seek 1.5s (C appr G)</button>
+            <button class="ctrl-btn" onclick="seek(2.0)">Seek 2.0s (Exact G)</button>
+            <button class="ctrl-btn" onclick="seek(5.5)">Seek 5.5s (Am appr F)</button>
+            <button class="ctrl-btn" onclick="seek(8.0)">Seek 8.0s (Song End)</button>
+            <button class="ctrl-btn" onclick="restart()">Restart (0s)</button>
+            <button class="ctrl-btn" onclick="runAutomatedAssertions()">Run Automated Assertions</button>
+        </div>
+
+        <div class="card">
+            <h3>Engine Live State</h3>
+            <div class="state-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Playback Time</div>
+                    <div class="stat-value" id="disp-time">0.00s</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Previous Chord</div>
+                    <div class="stat-value" id="disp-prev">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Current Chord</div>
+                    <div class="stat-value" id="disp-curr" style="color: #38BDF8;">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Next Chord</div>
+                    <div class="stat-value" id="disp-next">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Time Into Chord</div>
+                    <div class="stat-value" id="disp-into">0.00s</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Time Remaining</div>
+                    <div class="stat-value" id="disp-rem">0.00s</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Progress</div>
+                    <div class="stat-value" id="disp-prog">0.0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Approaching Next</div>
+                    <div class="stat-value" id="disp-appr">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="assertions-box" style="font-family: monospace; font-size: 0.85rem;">
+            Awaiting automated assertions...
+        </div>
+    </div>
+
+    <script>
+        const sampleTimeline = {
+            beginner_chords: [
+                { chordName: 'C', startTime: 0.0, endTime: 2.0 },
+                { chordName: 'G', startTime: 2.0, endTime: 4.0 },
+                { chordName: 'Am', startTime: 4.0, endTime: 6.0 },
+                { chordName: 'F', startTime: 6.0, endTime: 8.0 }
+            ]
+        };
+
+        const clock = new PlaybackClock({ duration: 8.0 });
+        const engine = new CurrentChordEngine(clock, { anticipationThreshold: 0.75 });
+        engine.loadTimeline(sampleTimeline);
+
+        function updateUI() {
+            const state = engine.getState();
+            document.getElementById('disp-time').textContent = state.currentTime.toFixed(2) + 's';
+            document.getElementById('disp-prev').textContent = state.previousChord ? state.previousChord.chordName : 'None';
+            document.getElementById('disp-curr').textContent = state.currentChord ? state.currentChord.chordName : 'None';
+            document.getElementById('disp-next').textContent = state.nextChord ? state.nextChord.chordName : 'None';
+            document.getElementById('disp-into').textContent = state.timeIntoChord.toFixed(2) + 's';
+            document.getElementById('disp-rem').textContent = state.timeRemaining.toFixed(2) + 's';
+            document.getElementById('disp-prog').textContent = (state.progress * 100).toFixed(1) + '%';
+            
+            const apprEl = document.getElementById('disp-appr');
+            if (state.isApproachingNextChord) {
+                apprEl.innerHTML = '<span class="approaching-badge appr-true">APPROACHING</span>';
+            } else {
+                apprEl.innerHTML = '<span class="approaching-badge appr-false">STABLE</span>';
+            }
+        }
+
+        clock.subscribe(updateUI);
+        updateUI();
+
+        function togglePlay() {
+            if (clock.state === 'PLAYING') clock.pause();
+            else clock.play();
+        }
+
+        function seek(t) {
+            clock.seek(t);
+        }
+
+        function restart() {
+            clock.seek(0);
+            clock.pause();
+        }
+
+        function runAutomatedAssertions() {
+            const logBox = document.getElementById('assertions-box');
+            logBox.innerHTML = '';
+            const logs = [];
+
+            function assertEq(name, actual, expected) {
+                if (actual === expected) {
+                    logs.push(`<div class="test-pass">✓ ${name}: Passed (${actual})</div>`);
+                } else {
+                    logs.push(`<div style="color: #EF4444; font-weight: bold;">✗ ${name}: Expected ${expected} but got ${actual}</div>`);
+                }
+            }
+
+            // Test 1: t = 0.5s
+            clock.seek(0.5);
+            assertEq('t=0.5 Current Chord', engine.getCurrentChord().chordName, 'C');
+            assertEq('t=0.5 Chord Index', engine.getCurrentChordIndex(), 0);
+            assertEq('t=0.5 Approaching', engine.isApproachingNextChord(), false);
+
+            // Test 2: t = 1.5s
+            clock.seek(1.5);
+            assertEq('t=1.5 Approaching (0.5s remaining <= 0.75s)', engine.isApproachingNextChord(), true);
+            assertEq('t=1.5 Time Remaining', engine.getTimeRemaining().toFixed(2), '0.50');
+
+            // Test 3: t = 2.0s
+            clock.seek(2.0);
+            assertEq('t=2.0 Exact Boundary Current Chord', engine.getCurrentChord().chordName, 'G');
+            assertEq('t=2.0 Chord Index', engine.getCurrentChordIndex(), 1);
+            assertEq('t=2.0 Previous Chord', engine.getPreviousChord().chordName, 'C');
+
+            // Test 4: t = 8.0s (Song end)
+            clock.seek(8.0);
+            assertEq('t=8.0 After Final Chord Current', engine.getCurrentChord(), null);
+            assertEq('t=8.0 Previous Chord', engine.getPreviousChord().chordName, 'F');
+            assertEq('t=8.0 Next Chord', engine.getNextChord(), null);
+
+            logBox.innerHTML = logs.join('');
+        }
+    </script>
+</body>
+</html>

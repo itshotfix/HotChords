@@ -1,262 +1,1709 @@
 /**
- * piano.css - Apple Premium Design + Piano Teacher V2 Overlay
- * Refined for Anchored Hand Guides and 3D keyboard visuals.
+ * piano.css - HotChords Phase 8 UI/UX Rearchitecture
+ * Clean, Apple-inspired music instrument & player workstation.
+ * Unified flex/grid layout across all 3 modes with shared responsive PianoDock.
  */
 
 :root {
   --blue: #0071E3;
-  --blue-dark: #0058b0;
+  --blue-hover: #0058b0;
+  --blue-light: rgba(0, 113, 227, 0.08);
+  --blue-glow: rgba(0, 113, 227, 0.25);
+  
   --bg: #F5F5F7;
   --card: #FFFFFF;
+  --surface: #FFFFFF;
   --surface-secondary: #FBFBFD;
+  --surface-tertiary: #F0F0F4;
+  
   --text: #1D1D1F;
   --text-muted: #6E6E73;
-  --border: #D2D2D7;
-  --border-light: #E8E8ED;
-  --piano-white-top: #FFFFFF;
-  --piano-white-bottom: #E8E8ED;
-  --piano-black: #1D1D1F;
-  --piano-active: #0071E3;
+  --text-subtle: #86868B;
   
-  --shadow-subtle: 0 4px 12px rgba(0,0,0,0.05);
-  --shadow-card: 0 8px 24px rgba(0,0,0,0.08);
-  --radius-card: 20px;
-  --radius-button: 22px;
-  --radius-inner: 12px;
+  --border: #D2D2D7;
+  --border-light: #E5E5EA;
+  --border-subtle: #F0F0F4;
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+  
+  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
 
-  --piano-height: 280px;
+  --piano-height: clamp(84px, 14vh, 124px);
+  --stage-gutter: clamp(14px, 2.6vw, 36px);
+  --stage-padding: clamp(14px, 2.4vh, 28px);
 }
 
-@media (min-width: 1440px) { :root { --piano-height: 320px; } }
-@media (min-width: 1920px) { :root { --piano-height: 380px; } }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
   background: var(--bg);
   color: var(--text);
-  overflow: hidden; 
-  height: 100vh;
-  width: 100vw;
-  display: flex;
-  flex-direction: column;
   -webkit-font-smoothing: antialiased;
 }
 
-header {
-  height: 48px;
-  background: rgba(255, 255, 255, 0.8);
+/* ═══════════════════════════════════════════
+   APPLICATION SHELL
+   ═══════════════════════════════════════════ */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* HEADER */
+header.app-header {
+  height: 44px;
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-light);
   display: flex;
   align-items: center;
-  padding: 0 24px;
+  justify-content: space-between;
+  padding: 0 clamp(16px, 3vw, 32px);
   flex-shrink: 0;
-  z-index: 1000;
+  z-index: 100;
 }
-.logo { font-size: 1.15rem; font-weight: 700; cursor: pointer; letter-spacing: -0.4px; }
-.logo span { color: var(--blue); }
 
+.logo-group {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.logo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--text);
+}
+
+.logo span {
+  color: var(--blue);
+}
+
+.version-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.btn-new-song {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-new-song:hover {
+  background: var(--blue-hover);
+}
+
+/* MAIN SCREENS CONTAINER */
 .main-view {
   flex: 1;
   display: flex;
   flex-direction: column;
-  width: 100%;
+  min-height: 0;
   position: relative;
   overflow: hidden;
 }
 
-.screen { display: none; height: 100%; width: 100%; flex-direction: column; overflow: hidden; }
-.screen.active { display: flex; }
-
-/* ═══════════════════════════════════════════
-   WORKSTATION LAYOUT
-   ═══════════════════════════════════════════ */
-
-.results-content-wrapper {
-  height: calc(100vh - 48px - var(--piano-height));
-  display: flex;
+.screen {
+  display: none;
+  height: 100%;
+  width: 100%;
   flex-direction: column;
   overflow: hidden;
 }
 
-.results-top {
-  padding: 20px 40px 0;
+.screen.active {
+  display: flex;
+}
+
+/* ═══════════════════════════════════════════
+   UPLOAD & ANALYSIS MODALS
+   ═══════════════════════════════════════════ */
+#upload-screen.active,
+#analysis-screen.active {
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-box {
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: clamp(32px, 6vh, 48px) clamp(24px, 5vw, 40px);
+  width: 100%;
+  max-width: 440px;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+
+.prog-bar-wrap {
+  background: var(--border-light);
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 16px 0;
+  width: 100%;
+}
+
+.prog-bar-fill {
+  background: var(--blue);
+  width: 0%;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* ═══════════════════════════════════════════
+   WORKSTATION LAYOUT (MUSIC PLAYER STAGE)
+   ═══════════════════════════════════════════ */
+.workstation-container {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 1. SONG META STRIP (COMPACT) */
+.song-meta-strip {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.5vw, 16px);
+  padding: 8px clamp(16px, 3vw, 32px);
+  background: var(--card);
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  overflow-x: auto;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.meta-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.meta-val {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.meta-track {
+  margin-left: auto;
+  color: var(--text-muted);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 2. TAB NAVIGATION & QUICK CONTROLS STRIP */
+.tab-nav-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px clamp(16px, 3vw, 32px);
+  background: var(--card);
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.primary-tabs {
+  display: flex;
+  background: var(--surface-secondary);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  border: 1px solid var(--border-light);
+  gap: 2px;
+}
+
+.nav-tab-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.nav-tab-btn.active {
+  background: var(--card);
+  color: var(--blue);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.quick-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.speed-group {
+  display: flex;
+  align-items: center;
+  background: var(--surface-secondary);
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid var(--border-light);
+  gap: 2px;
+}
+
+.speed-btn {
+  border: none;
+  background: transparent;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.speed-btn.active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+}
+
+.ctrl-btn {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-light);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ctrl-btn:hover {
+  background: var(--border-light);
+}
+
+.ctrl-btn.danger {
+  color: #E5484D;
+}
+
+.ctrl-btn.btn-sustain-active {
+  background: var(--blue-light);
+  border-color: var(--blue);
+  color: var(--blue);
+  font-weight: 700;
+}
+
+/* 3. MUSIC PLAYER STAGE (FLEX VERTICAL CONTAINER) */
+.music-player-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg);
+}
+
+/* MODE CONTENT VIEWPORT — legacy fallback only (workstation no longer uses tabs) */
+.mode-content-viewport {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--stage-padding) var(--stage-gutter);
   gap: 16px;
+}
+
+/* ═══════════════════════════════════════════
+   TAB 1: SIMPLIFIED CHORDS VIEW
+   ═══════════════════════════════════════════ */
+.simplified-chords-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PHASE 9A.1 — CRT: 3-Lane Physical Chord Timeline
+   Deterministic state-driven 3-position carousel.
+   Positioned independently from document flow.
+   Zero text reflow or layout shifting.
+   ALL chord motion via WAAPI (element.animate) only.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Shell: outer wrapper ─────────────────────────────────── */
+.crt-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 2.5vw, 36px);
+  width: 100%;
+  padding: clamp(6px, 1.4vh, 16px) clamp(12px, 2.5vw, 28px);
+  user-select: none;
+}
+
+.crt-shell--with-hands {
+  justify-content: space-between;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ── Center: viewport + track ─────────────────────────────── */
+.crt-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Viewport clips transient items during slide animation */
+.crt-viewport {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  height: clamp(85px, 13vh, 120px);
+  overflow: hidden;
+}
+
+/* Track container holding absolute chord lane cards */
+.crt-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── 3-Position Chord Cards (Anchored to Viewport Center 50%/50%) ─ */
+.crt-card,
+.crt-item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  will-change: transform, opacity, filter;
+  user-select: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.crt-card--prev,
+.crt-item--prev {
+  cursor: pointer;
+  z-index: 1;
+}
+
+.crt-card--current,
+.crt-item--current {
+  cursor: default;
+  z-index: 2;
+}
+
+.crt-card--next,
+.crt-item--next {
+  cursor: pointer;
+  z-index: 1;
+}
+
+/* ── Chord Name Typography ─────────────────────────────────── */
+.crt-chord-name {
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Previous chord: smaller, muted */
+.crt-card--prev .crt-chord-name,
+.crt-item--prev .crt-chord-name {
+  font-size: clamp(1.4rem, 3.2vw, 2.3rem);
+  color: #8E8E93;
+}
+
+/* Next chord: smaller, muted */
+.crt-card--next .crt-chord-name,
+.crt-item--next .crt-chord-name {
+  font-size: clamp(1.4rem, 3.2vw, 2.3rem);
+  color: #636366;
+}
+
+/* Current chord: HERO — large, vivid, glowing */
+.crt-card--current .crt-chord-name,
+.crt-item--current .crt-chord-name {
+  font-size: clamp(3.2rem, 7.2vw, 5.2rem);
+  color: #5856D6;
+  text-shadow:
+    0 0 20px rgba(88, 86, 214, 0.50),
+    0 0 45px rgba(88, 86, 214, 0.25);
+}
+
+/* ── Voicing subtitle (current chord only) ─────────────────── */
+.crt-chord-voicing {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #5856D6;
+  opacity: 0.80;
+  margin-top: 4px;
+  letter-spacing: 0.3px;
+}
+
+/* ── Progress bar (current chord duration indicator) ────────── */
+.crt-progress-track {
+  width: clamp(80px, 14vw, 140px);
+  height: 4px;
+  background: rgba(88, 86, 214, 0.14);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+/* Only current slot shows the progress track */
+.crt-card--prev .crt-progress-track,
+.crt-item--prev .crt-progress-track,
+.crt-card--next .crt-progress-track,
+.crt-item--next .crt-progress-track {
+  display: none;
+}
+
+.crt-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5856D6, #AF52DE);
+  width: 0%;
+  border-radius: 2px;
+}
+
+/* ── Hand Columns (Phase 9A: structure only) ──────────────── */
+.crt-hand-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  box-shadow: var(--shadow-subtle);
+  min-width: clamp(120px, 16vw, 170px);
   flex-shrink: 0;
 }
 
-.info-strip { display: flex; gap: 12px; }
-.chip { 
-  background: var(--card); 
-  padding: 8px 16px; 
-  border-radius: var(--radius-inner); 
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-subtle);
+.crt-hand-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.crt-hand-visual {
+  width: clamp(85px, 11vw, 115px);
+  height: clamp(95px, 12vw, 125px);
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
 }
-.chip .lbl { font-size: 0.6rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.6px; margin-bottom: 2px; }
-.chip .val { font-size: 0.9rem; font-weight: 700; color: var(--text); }
 
-.waveform-box {
+.crt-hand-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.crt-hand-svg svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.04));
+}
+
+.crt-finger-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+}
+
+.crt-finger-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.crt-chip-fnum { color: var(--text-muted); }
+.crt-chip-note { color: var(--text); font-weight: 800; }
+.crt-chip-idle { font-size: 0.8rem; color: var(--text-muted); }
+
+/* ── Backward-compatibility aliases for old tests/scripts ─── */
+/* These let the test suite still query #reel-slot-prev etc. */
+/* IDs are assigned by JS _render(). The selectors below      */
+/* match what the test suite expects.                          */
+#reel-slot-prev    { /* old id now maps to crt-item--prev  */ }
+#reel-slot-current { /* old id now maps to crt-item--current */ }
+#reel-slot-next    { /* old id now maps to crt-item--next  */ }
+
+/* ── Responsive overrides ────────────────────────────────── */
+@media (max-width: 768px) {
+  .crt-shell--with-hands {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .crt-center {
+    order: 1;
+    width: 100%;
+  }
+  .crt-hand-col { order: 2; }
+  .crt-hand-col.crt-hand-right { order: 3; }
+  .crt-item--current .crt-chord-name {
+    font-size: clamp(2.8rem, 10vw, 4.0rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .crt-shell {
+    padding: 8px 12px;
+    gap: 12px;
+  }
+  .crt-track {
+    gap: clamp(10px, 4vw, 20px);
+  }
+  .crt-item--current .crt-chord-name {
+    font-size: clamp(2.4rem, 13vw, 3.2rem);
+  }
+  .crt-item--prev .crt-chord-name,
+  .crt-item--next .crt-chord-name {
+    font-size: clamp(1.1rem, 5vw, 1.6rem);
+  }
+  .crt-progress-track {
+    width: clamp(60px, 20vw, 100px);
+  }
+}
+
+/* ── Keep old shared-chord-timeline for backwards compat ──── */
+.shared-chord-timeline {
+  display: contents; /* transparent wrapper — crt-shell handles layout */
+}
+.shared-chord-timeline.has-hands-layout {
+  display: contents;
+}
+
+/* OLD reel-* — kept for backward compat with old test assertions */
+/* Do not use for new rendering */
+.reel-hand-col { display: none; } /* superseded by .crt-hand-col */
+
+
+
+.chord-ribbon-wrapper {
   background: var(--card);
-  border-radius: var(--radius-card);
-  padding: 12px;
-  height: 80px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: clamp(12px, 2vh, 20px) clamp(16px, 2.5vw, 32px);
+  box-shadow: var(--shadow-subtle);
+}
+
+.chord-ribbon-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.8vw, 18px) clamp(10px, 2.2vw, 24px);
+  line-height: 1.2;
+}
+
+.ribbon-chord-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.ribbon-chord-item:hover {
+  background: var(--surface-tertiary);
+}
+
+.ribbon-chord-name {
+  font-size: clamp(1.2rem, 2.8vw, 1.8rem);
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  transition: color 0.15s ease;
+}
+
+.ribbon-chord-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ribbon-chord-time {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ribbon-measure-bar {
+  font-size: clamp(1.2rem, 2.8vw, 1.8rem);
+  font-weight: 300;
+  color: var(--border);
+  user-select: none;
+}
+
+/* ACTIVE CHORD STATE (CLEAN TYPOGRAPHY + ACCENT GLOW) */
+.ribbon-chord-item.active-chord,
+.beg-chord-cell.active-chord-cell {
+  background: var(--blue-light);
+  border-radius: 8px;
+}
+
+.ribbon-chord-item.active-chord .ribbon-chord-name,
+.beg-chord-cell.active-chord-cell .beg-chord-name {
+  color: var(--blue);
+  text-shadow: 0 0 12px var(--blue-glow);
+}
+
+.ribbon-chord-item.active-chord .ribbon-chord-time {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════
+   TAB 2: PRACTICE VIEW (HERO HUD & HANDS)
+   ═══════════════════════════════════════════ */
+.practice-view {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  width: 100%;
+}
+
+.practice-subnav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subnav-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.subnav-pills {
+  display: flex;
+  background: var(--surface-secondary);
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid var(--border-light);
+  gap: 2px;
+}
+
+.subnav-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.subnav-btn.active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+}
+
+.bplr-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* HERO CURRENT & NEXT CHORD ROW */
+.bplr-hud-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.bplr-card {
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
   box-shadow: var(--shadow-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bplr-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bplr-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.bplr-badge-current {
+  background: var(--blue-light);
+  color: var(--blue);
+  border: 1px solid rgba(0, 113, 227, 0.2);
+}
+
+.bplr-badge-next {
+  background: rgba(217, 119, 6, 0.08);
+  color: #D97706;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+.bplr-diff-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.bplr-diff-easy { background: rgba(16, 185, 129, 0.12); color: #059669; }
+.bplr-diff-moderate { background: rgba(245, 158, 11, 0.12); color: #D97706; }
+.bplr-diff-difficult { background: rgba(239, 68, 68, 0.12); color: #DC2626; }
+
+.bplr-chord-hero {
+  font-size: clamp(2.0rem, 4.5vw, 3.4rem);
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.bplr-next-chord-hero {
+  font-size: clamp(1.6rem, 3.6vw, 2.4rem);
+  font-weight: 800;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.bplr-progress-bar-wrap {
+  height: 4px;
+  background: var(--surface-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 3px 0;
+}
+
+.bplr-progress-bar-fill {
+  height: 100%;
+  background: var(--blue);
+  width: 0%;
+  transition: width 0.08s linear;
+}
+
+.bplr-notes-summary {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.bplr-transition-advice {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* HAND & FINGER GUIDE STRIP (PROMINENT ANIMATED HANDS) */
+.bplr-hand-guides-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.bplr-hand-card {
+  padding: 10px 16px;
+  background: var(--card);
+}
+
+.bplr-hand-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bplr-hand-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 2.5vw, 24px);
+  margin-top: 6px;
+}
+
+.bplr-hand-diagram {
+  width: clamp(80px, 12vw, 120px);
+  height: clamp(90px, 13vw, 130px);
+  flex-shrink: 0;
+}
+
+.bplr-hand-diagram svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.04));
+}
+
+.bplr-finger-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.bplr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+
+
+/* ═══════════════════════════════════════════
+   4. PLAYBACK BAR (COMPACT TRANSPORT)
+   ═══════════════════════════════════════════ */
+.playback-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px clamp(16px, 3vw, 32px);
+  background: var(--card);
+  border-top: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+
+.wf-wrap {
+  position: relative;
+  height: 28px;
+  cursor: pointer;
+  background: var(--surface-secondary);
+  border-radius: 6px;
+  overflow: hidden;
   border: 1px solid var(--border-light);
 }
-.wf-wrap { position: relative; flex: 1; cursor: pointer; background: var(--surface-secondary); border-radius: 8px; overflow: hidden; }
-#wf-canvas { width: 100%; height: 100%; }
-#playhead { position: absolute; top:0; left:0; width:2px; height:100%; background: var(--blue); pointer-events:none; z-index: 10; }
 
-.playback-bar { display: flex; align-items: center; gap: 24px; height: 32px; padding: 0 10px; }
+#wf-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+#playhead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--blue);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.transport-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 28px;
+}
+
 .play-btn {
-  width: 30px; height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--blue);
   border: none;
   cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: transform 0.2s;
-}
-.play-btn:active { transform: scale(0.92); }
-
-.seek-bar { flex: 1; accent-color: var(--blue); cursor: pointer; height: 4px; }
-.time-disp { font-size: 0.75rem; color: var(--text-muted); min-width: 45px; font-weight: 600; font-variant-numeric: tabular-nums; }
-
-/* CHORD HERO V3: Anchored Hands */
-.chord-hero-section {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 50px;
-  padding: 20px;
-  background: var(--bg);
-}
-
-.hand-guide-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    width: 220px;
-    opacity: 0.3;
-    transition: opacity 0.3s;
-}
-.hand-guide-box.active { opacity: 1; }
-
-.hand-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-}
-
-.chord-hero-box {
-    text-align: center;
-    min-width: 320px;
-}
-.chord-hero {
-  font-size: clamp(3.5rem, 15vh, 10rem);
-  font-weight: 800;
-  color: var(--text);
-  line-height: 1;
-  letter-spacing: -3px;
-  margin-bottom: 8px;
-}
-.chord-notes-list {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--text-muted);
-}
-
-.timeline-bar {
-  height: 60px;
+  transition: transform 0.15s ease, background 0.15s ease;
   flex-shrink: 0;
-  padding: 0 40px 10px;
 }
-.timeline-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; height: 100%; }
-.tm-item { 
-  min-width: 80px; 
-  background: var(--card); 
-  border: 1px solid var(--border-light); 
-  border-radius: 12px; 
-  padding: 6px; 
-  text-align: center; 
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  box-shadow: var(--shadow-subtle);
-  transition: all 0.2s;
-}
-.tm-item.active { background: var(--blue); color: #fff; border-color: var(--blue); box-shadow: 0 4px 12px rgba(0,113,227,0.3); }
 
-/* PIANO DOCK V3 */
+.play-btn:hover {
+  background: var(--blue-hover);
+}
+
+.play-btn:active {
+  transform: scale(0.92);
+}
+
+.seek-bar {
+  flex: 1;
+  accent-color: var(--blue);
+  cursor: pointer;
+  height: 4px;
+}
+
+.time-disp {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  min-width: 40px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════
+   5. SHARED RESPONSIVE PIANO DOCK
+   ═══════════════════════════════════════════ */
 .piano-dock {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100vw;
+  width: 100%;
   height: var(--piano-height);
   background: #FFFFFF;
   border-top: 1px solid var(--border-light);
-  box-shadow: 0 -4px 30px rgba(0,0,0,0.03);
-  z-index: 1000;
+  flex-shrink: 0;
+  display: flex;
+  overflow: hidden;
 }
 
-#piano-keyboard { width: 100%; height: 100%; }
+#piano-keyboard {
+  width: 100%;
+  height: 100%;
+}
 
 .key-label {
-    user-select: none;
-    pointer-events: none;
-    text-anchor: middle;
+  user-select: none;
+  pointer-events: none;
+  text-anchor: middle;
 }
 
-/* MODALS & PROGRESS */
-#upload-screen.active, #analysis-screen.active { align-items: center; justify-content: center; background: var(--bg); }
-.modal-box {
-  background: var(--card);
+/* ═══════════════════════════════════════════
+   6. RESPONSIVE FORM FACTORS
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .song-meta-strip {
+    padding: 6px 14px;
+    font-size: 0.72rem;
+    gap: 10px;
+  }
+  .meta-track {
+    max-width: 180px;
+  }
+  .shared-chord-timeline.has-hands-layout {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  .reel-conveyor-center {
+    order: 1;
+    width: 100%;
+    max-width: 100%;
+  }
+  .reel-hand-left {
+    order: 2;
+    min-width: 130px;
+    padding: 6px 10px;
+  }
+  .reel-hand-right {
+    order: 3;
+    min-width: 130px;
+    padding: 6px 10px;
+  }
+  .reel-hand-visual-wrap {
+    width: 65px;
+    height: 75px;
+  }
+  .reel-slot-chord-hero {
+    font-size: clamp(2.4rem, 5.5vw, 3.4rem);
+  }
+  .reel-slot-chord-name {
+    font-size: clamp(1.4rem, 3.2vw, 1.8rem);
+  }
+}
+
+@media (max-width: 640px) {
+  .tab-nav-strip {
+    padding: 6px 12px;
+    gap: 6px;
+  }
+  .primary-tabs {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .nav-tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 5px 6px;
+    font-size: 0.72rem;
+  }
+  .quick-controls {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .song-meta-strip {
+    padding: 6px 12px;
+    font-size: 0.70rem;
+    gap: 8px;
+  }
+  .meta-track {
+    display: none;
+  }
+  .mode-content-viewport {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .playback-bar-container {
+    padding: 6px 12px;
+  }
+  .shared-chord-timeline {
+    gap: 6px;
+    padding: 2px 0;
+  }
+  .reel-chords-row {
+    gap: 6px;
+  }
+  .reel-slot-prev, .reel-slot-next {
+    min-width: 50px;
+  }
+  .reel-slot-current {
+    min-width: 120px;
+    transform: scale(1.12);
+    padding: 2px 8px;
+  }
+  .reel-progress-pill-track {
+    width: 100px;
+    height: 4px;
+    margin: 4px auto 2px;
+  }
+  .reel-hand-col {
+    padding: 4px 8px;
+    min-width: 110px;
+    gap: 2px;
+  }
+  .reel-hand-visual-wrap {
+    width: 50px;
+    height: 56px;
+  }
+  .reel-finger-chip {
+    padding: 1px 4px;
+    font-size: 0.65rem;
+    gap: 3px;
+  }
+  .piano-dock {
+    height: clamp(85px, 15vh, 110px);
+  }
+}
+
+/* ── Phase 9B chord label overrides (merged into main, no duplicate :root) ── */
+
+.crt-shell {
+  gap: clamp(16px, 3vw, 42px);
+  padding: clamp(18px, 4vh, 42px) clamp(12px, 2.5vw, 28px);
+}
+
+.crt-shell--with-hands {
+  align-items: stretch;
+}
+
+.shared-chord-timeline.crt-shell,
+.shared-chord-timeline.crt-shell.has-hands-layout {
+  display: flex;
+}
+
+.crt-hand-col.reel-hand-col {
+  display: flex;
+}
+
+.crt-viewport {
+  max-width: 760px;
+  height: clamp(108px, 17vh, 154px);
+}
+
+.crt-card-label,
+.chord-card-label {
+  margin-bottom: 8px;
+  color: var(--text-subtle);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.crt-card--current .crt-card-label,
+.crt-item--current .crt-card-label,
+.chord-card--current .chord-card-label {
+  color: var(--blue);
+}
+
+.crt-chord-voicing {
+  color: var(--blue);
+}
+
+.crt-progress-track {
+  background: rgba(0, 113, 227, 0.14);
+}
+
+.crt-progress-fill {
+  background: linear-gradient(90deg, var(--blue), #34AADC);
+}
+
+.piano-dock {
+  box-shadow: 0 -8px 24px rgba(29, 29, 31, 0.04);
+}
+
+/* UTILITIES */
+.hidden {
+  display: none !important;
+}
+
+::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PHASE 10 — UNIFIED SINGLE WORKSPACE
+   4-row permanent layout: Header → Playback → Learning Area → Piano.
+   Hands and 3-chord carousel are active in ALL modes (Simple, Original, Practice).
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Upload/Analysis: fullscreen overlay ─────────────────────────────────── */
+#upload-screen,
+#analysis-screen {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  z-index: 200;
+  padding: 20px;
+}
+
+#upload-screen.active,
+#analysis-screen.active {
+  display: flex;
+}
+
+/* ── Workspace: 4-row permanent grid ─────────────────────────────────────── */
+.workspace {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows:
+    auto                 /* Row 1: ws-header */
+    1fr                  /* Row 2: ws-learning-area (hands + 3-chord carousel) */
+    var(--piano-height)  /* Row 3: ws-piano */
+    auto;                /* Row 4: ws-playback (waveform + transport) */
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.workspace.hidden {
+  display: none !important;
+}
+
+/* ── ROW 1: Header bar ───────────────────────────────────────────────────── */
+.ws-header {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.4vw, 16px);
+  padding: 0 clamp(12px, 2.5vw, 28px);
+  height: 48px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.ws-logo {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.ws-logo span { color: var(--blue); }
+
+.ws-version {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.ws-meta {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1.1vw, 14px);
+  flex-shrink: 0;
+}
+
+.ws-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.ws-meta-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ws-meta-val {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ws-meta-track {
+  color: var(--text-muted);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mode pill group */
+.ws-mode-selector {
+  display: flex;
+  background: var(--surface-secondary);
+  border-radius: 8px;
+  padding: 2px;
   border: 1px solid var(--border-light);
-  padding: 60px 40px;
-  border-radius: 28px;
-  text-align: center;
-  cursor: pointer;
-  width: 440px;
-  box-shadow: var(--shadow-card);
+  gap: 2px;
+  flex-shrink: 0;
 }
-.prog-bar-wrap { background: var(--border-light); height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 20px; width: 100%; }
-.prog-bar-fill { background: var(--blue); width: 0%; height: 100%; transition: width 0.4s; }
 
-.hidden { display: none !important; }
-::-webkit-scrollbar { height: 6px; width: 6px; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-
-.btn-primary {
-  background: var(--blue);
-  color: #fff;
-  padding: 8px 24px;
-  border-radius: var(--radius-button);
+.mode-btn {
   border: none;
-  font-size: 13px;
+  background: transparent;
+  padding: 5px 13px;
+  font-size: 0.76rem;
   font-weight: 600;
+  color: var(--text-muted);
   cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+  white-space: nowrap;
 }
-.btn-primary:hover { background-color: var(--blue-dark); }
-.btn-primary:active { transform: scale(0.98); }
+
+.mode-btn.active {
+  background: var(--card);
+  color: var(--blue);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.ws-quick-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ── ROW 4: Waveform + Transport ─────────────────────────────────────────── */
+.ws-playback {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px clamp(12px, 2.5vw, 28px);
+  background: var(--card);
+  border-top: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+
+
+.ws-waveform {
+  position: relative;
+  height: 28px;
+  cursor: pointer;
+  background: var(--surface-secondary);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.ws-waveform canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.ws-transport-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 26px;
+}
+
+/* ── ROW 3: Central Learning Area (Hands + 3-Chord Timeline) ──────────────── */
+.ws-learning-area {
+  display: grid;
+  grid-template-columns: clamp(130px, 16vw, 200px) 1fr clamp(130px, 16vw, 200px);
+  grid-template-areas: "lh center rh";
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* Hand columns: permanent in all modes */
+.ws-hand-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--card);
+  padding: 10px 8px;
+  overflow: hidden;
+  min-width: 0;
+  user-select: none;
+}
+
+.ws-hand-col--left  { grid-area: lh; border-right: 1px solid var(--border-light); }
+.ws-hand-col--right { grid-area: rh; border-left:  1px solid var(--border-light); }
+
+.ws-hand-label {
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-align: center;
+}
+
+.ws-hand-svg {
+  width: clamp(75px, 10vw, 120px);
+  height: clamp(85px, 11vw, 130px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ws-hand-svg svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.05));
+}
+
+.ws-finger-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  width: 100%;
+  max-width: 150px;
+}
+
+.ws-finger-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  width: 100%;
+}
+
+.ws-chip-fnum { color: var(--text-muted); font-size: 0.62rem; }
+.ws-chip-note { color: var(--text); font-weight: 800; font-size: 0.72rem; }
+.ws-chip-idle { font-size: 0.78rem; color: var(--text-muted); padding: 2px 0; }
+
+/* Center column: 3-chord viewport */
+.ws-chord-center {
+  grid-area: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── 3-Chord Viewport & Carousel ─────────────────────────────────────────── */
+.ws-chord-viewport {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: clamp(140px, 20vh, 220px);
+  overflow: hidden;
+}
+
+.ws-chord-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Individual chord cards: positioned absolutely at center and scaled/translated */
+.chord-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  will-change: transform, opacity;
+  user-select: none;
+}
+
+.chord-card--prev {
+  cursor: pointer;
+}
+
+.chord-card--next {
+  cursor: pointer;
+}
+
+.chord-card--current {
+  cursor: default;
+}
+
+.chord-card-label {
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.chord-card--current .chord-card-label {
+  color: var(--blue);
+}
+
+.chord-card-name {
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-size: clamp(3.0rem, 6.8vw, 5.2rem);
+  color: var(--text-muted);
+}
+
+/* Hero styling on current card */
+.chord-card--current .chord-card-name,
+.chord-card-name--hero {
+  color: var(--blue);
+  text-shadow:
+    0 0 20px rgba(0, 113, 227, 0.45),
+    0 0 50px rgba(0, 113, 227, 0.20);
+}
+
+.chord-card-voicing {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--blue);
+  opacity: 0.85;
+  margin-top: 4px;
+  letter-spacing: 0.3px;
+}
+
+.chord-progress-track {
+  width: clamp(80px, 14vw, 150px);
+  height: 4px;
+  background: rgba(0, 113, 227, 0.14);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.chord-card--prev .chord-progress-track,
+.chord-card--next .chord-progress-track { display: none; }
+
+.chord-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), #34AADC);
+  width: 0%;
+  border-radius: 2px;
+}
+
+/* ── ROW 4: Persistent Piano ─────────────────────────────────────────────── */
+.ws-piano {
+  display: flex;
+  overflow: hidden;
+  background: #FFFFFF;
+  border-top: 1px solid var(--border-light);
+  box-shadow: 0 -6px 20px rgba(29, 29, 31, 0.04);
+}
+
+.ws-piano #piano-keyboard {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Responsive Reflow ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .ws-learning-area {
+    grid-template-columns: clamp(100px, 16vw, 150px) 1fr clamp(100px, 16vw, 150px);
+  }
+
+  .ws-meta-track { display: none; }
+
+  .chord-card-name {
+    font-size: clamp(2.4rem, 8vw, 4.0rem);
+  }
+}
+
+@media (max-width: 640px) {
+  .ws-header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 48px;
+    padding: 6px 12px;
+    gap: 6px;
+  }
+
+  .ws-quick-controls {
+    order: 10;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .ws-learning-area {
+    grid-template-columns: 80px 1fr 80px;
+  }
+
+  .ws-hand-label { display: none; }
+  .ws-finger-chips { display: none; }
+
+  .chord-card-name {
+    font-size: clamp(2.2rem, 12vw, 3.6rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chord-progress-fill,
+  .ws-layer-toggle {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+

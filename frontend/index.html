@@ -4,435 +4,605 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HotChords Workstation</title>
+    <meta name="description" content="HotChords — Interactive piano music stand. Follow along with simplified or original chords, hand diagrams, and persistent piano.">
     <link rel="stylesheet" href="/css/piano.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <style>
-        .practice-panel {
-            background: var(--card);
-            border-radius: var(--radius-inner);
-            border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-subtle);
-            padding: 10px 16px;
-            margin-top: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            transition: all 0.2s ease;
-        }
-        .panel-row {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            flex-wrap: wrap;
-            width: 100%;
-        }
-        .panel-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .panel-label {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            font-weight: 700;
-            letter-spacing: 0.6px;
-        }
-        .toggle-group {
-            display: flex;
-            background: var(--surface-secondary);
-            border-radius: 10px;
-            padding: 3px;
-            border: 1px solid var(--border-light);
-        }
-        .toggle-btn {
-            border: none;
-            background: transparent;
-            padding: 6px 14px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            cursor: pointer;
-            border-radius: 7px;
-            transition: all 0.2s;
-        }
-        .toggle-btn.active {
-            background: var(--card);
-            color: var(--text);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-        }
-        .easy-key-badge {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--blue);
-            background: rgba(0, 113, 227, 0.08);
-            padding: 4px 12px;
-            border-radius: 8px;
-            border: 1px solid rgba(0, 113, 227, 0.15);
-            font-variant-numeric: tabular-nums;
-        }
-    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 </head>
-<body>
+<body class="app-shell">
 
-<header>
-    <div class="logo" onclick="resetApp()">Hot<span>Chords</span></div>
-    <div id="hdr-actions" class="hidden" style="margin-left: auto;">
-        <button onclick="resetApp()" class="btn-primary">New Song</button>
+<!-- ╔══════════════════════════════════════════╗
+     ║  UPLOAD SCREEN                           ║
+     ╚══════════════════════════════════════════╝ -->
+<div id="upload-screen" class="screen active">
+    <div class="modal-box" onclick="document.getElementById('file-input').click()">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:20px; opacity:0.9">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <h2 style="font-size:22px; font-weight:700; margin-bottom:6px; letter-spacing:-0.5px;">Start your session</h2>
+        <p style="color:var(--text-muted); font-size:15px; font-weight:500;">Drop an audio file or click to browse</p>
+        <input type="file" id="file-input" class="hidden" accept=".mp3,.wav,.flac">
     </div>
-</header>
+</div>
 
-<main class="main-view">
-    <!-- UPLOAD SCREEN -->
-    <div id="upload-screen" class="screen active">
-        <div class="modal-box" onclick="document.getElementById('file-input').click()">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:24px; opacity:0.8">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            <h2 style="font-size:24px; font-weight:700; margin-bottom:8px; letter-spacing:-0.5px;">Start your session</h2>
-            <p style="color:var(--text-muted); font-size:16px; font-weight:500;">Drop an audio file or click to browse</p>
-            <input type="file" id="file-input" class="hidden" accept=".mp3,.wav,.flac">
+<!-- ╔══════════════════════════════════════════╗
+     ║  ANALYSIS SCREEN                         ║
+     ╚══════════════════════════════════════════╝ -->
+<div id="analysis-screen" class="screen">
+    <div class="modal-box" style="cursor:default; max-width:440px;">
+        <h3 id="prog-file-name" style="font-size:18px; font-weight:700; margin-bottom:16px; letter-spacing:-0.4px;">Analyzing audio...</h3>
+        <div id="prog-bar-container" class="prog-bar-wrap">
+            <div id="prog-bar" class="prog-bar-fill" style="width: 5%;"></div>
+        </div>
+        <div id="prog-msg" style="font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:8px;">Uploading audio file...</div>
+        <div id="prog-error-box" class="hidden" style="margin-top:16px; padding:12px 14px; background:rgba(229, 72, 77, 0.12); border:1px solid #E5484D; border-radius:8px; text-align:left;">
+            <div style="color:#E5484D; font-weight:700; font-size:13px; margin-bottom:4px;">Analysis Error</div>
+            <div id="prog-error-detail" style="color:var(--text); font-size:12px; word-break:break-word;"></div>
+            <button onclick="resetApp()" style="margin-top:10px; padding:6px 14px; background:var(--blue); color:white; border:none; border-radius:6px; font-weight:600; font-size:12px; cursor:pointer;">Choose Another File</button>
         </div>
     </div>
+</div>
 
-    <!-- ANALYSIS SCREEN -->
-    <div id="analysis-screen" class="screen">
-        <div class="modal-box" style="cursor:default;">
-            <h3 id="prog-file-name" style="font-size:20px; font-weight:700; margin-bottom:24px; letter-spacing:-0.5px;">Analyzing audio...</h3>
-            <div class="prog-bar-wrap">
-                <div id="prog-bar" class="prog-bar-fill"></div>
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  PERMANENT SINGLE WORKSPACE (Interactive Music Stand)        ║
+     ║  Hierarchy:                                                  ║
+     ║  1. HEADER (Logo + Metadata + Mode Selector + Controls)     ║
+     ║  2. CENTRAL CHORD LEARNING (Left Hand | 3 Chords | Right)    ║
+     ║  3. PERSISTENT PIANO                                         ║
+     ║  4. PLAYBACK (Waveform + Transport Controls)                 ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<div id="workspace" class="workspace hidden" data-mode="simplified">
+
+    <!-- 1. HEADER ROW -->
+    <header class="ws-header">
+        <div class="ws-logo" onclick="resetApp()" title="New Song">Hot<span>Chords</span> <span class="ws-version">v0.2</span></div>
+
+        <div class="ws-meta">
+            <div class="ws-meta-item"><span class="ws-meta-label">Key</span><span class="ws-meta-val" id="val-key">—</span></div>
+            <div class="ws-meta-item"><span class="ws-meta-label">BPM</span><span class="ws-meta-val" id="val-bpm">—</span></div>
+            <div class="ws-meta-item"><span class="ws-meta-label">Time</span><span class="ws-meta-val" id="val-sig">—</span></div>
+            <div class="ws-meta-item ws-meta-track"><span class="ws-meta-label">Track</span><span class="ws-meta-val" id="res-file-name">—</span></div>
+        </div>
+
+        <!-- Mode Selector: Simplified vs Original -->
+        <div class="ws-mode-selector" role="tablist" aria-label="Chord mode">
+            <button class="mode-btn active" data-mode="simplified" id="mode-btn-simplified" onclick="setMode('simplified')" role="tab" aria-selected="true">Simplified</button>
+            <button class="mode-btn"        data-mode="original"   id="mode-btn-original"   onclick="setMode('original')"   role="tab" aria-selected="false">Original</button>
+        </div>
+
+        <div class="ws-quick-controls">
+            <div class="speed-group">
+                <button class="speed-btn active" id="spd-100" onclick="setSpeed(1.0)">1.00×</button>
+                <button class="speed-btn"         id="spd-075" onclick="setSpeed(0.75)">0.75×</button>
+                <button class="speed-btn"         id="spd-050" onclick="setSpeed(0.50)">0.50×</button>
             </div>
-            <div id="prog-msg" style="font-size:14px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Engine warming up...</div>
+            <button class="ctrl-btn" id="btn-sustain"   onclick="handleToggleSustain()" title="Toggle piano sustain pedal">Sustain OFF</button>
+            <button class="ctrl-btn"                     onclick="handleRestart()">↺ Restart</button>
+            <button class="ctrl-btn danger"              onclick="handleStop()">■ Stop</button>
+            <button class="ctrl-btn" id="btn-new-song"  onclick="resetApp()">New Song</button>
         </div>
-    </div>
+    </header>
 
-    <!-- RESULTS WORKSTATION -->
-    <div id="results-screen" class="screen">
-        <div class="results-content-wrapper">
-            <!-- TOP: Info, Waveform, Playback -->
-            <div class="results-top">
-                <div class="info-strip">
-                    <div class="chip"><span class="lbl">Key</span><span class="val" id="val-key">-</span></div>
-                    <div class="chip"><span class="lbl">BPM</span><span class="val" id="val-bpm">-</span></div>
-                    <div class="chip"><span class="lbl">Time</span><span class="val" id="val-sig">-</span></div>
-                    <div class="chip" style="flex:1; align-items:flex-end;"><span class="lbl">Track</span><span class="val" id="res-file-name" style="color:var(--text-muted); max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">-</span></div>
-                </div>
+    <!-- 2. CENTRAL CHORD LEARNING AREA: Left Hand | 3-Chord Reel | Right Hand -->
+    <main class="ws-learning-area">
 
-                <!-- PRACTICE PANEL -->
-                <div class="practice-panel">
-                    <div class="panel-row">
-                        <div class="panel-group">
-                            <span class="panel-label">Practice Mode</span>
-                            <div class="toggle-group">
-                                <button id="btn-mode-orig" class="toggle-btn active" onclick="setPracticeMode('original')">Original Analysis</button>
-                                <button id="btn-mode-beg" class="toggle-btn" onclick="setPracticeMode('beginner')">Beginner Chart</button>
-                            </div>
+        <!-- Left Hand Column (Bass) -->
+        <aside id="ws-hand-left" class="ws-hand-col ws-hand-col--left" aria-label="Left hand bass guidance">
+            <div class="ws-hand-label">Left Hand (Bass)</div>
+            <div id="ws-lh-svg" class="ws-hand-svg"></div>
+            <div id="ws-lh-chips" class="ws-finger-chips"><span class="ws-chip-idle">—</span></div>
+        </aside>
+
+        <!-- Center: 3-Chord Reel (Prev < Current Hero > Next) -->
+        <section class="ws-chord-center">
+            <div id="chord-viewport" class="ws-chord-viewport">
+                <div id="chord-track" class="ws-chord-track">
+
+                    <div id="chord-prev" class="chord-card chord-card--prev" title="Click to go back">
+                        <div class="chord-card-label">Previous</div>
+                        <div class="chord-card-name" data-chord-name>—</div>
+                    </div>
+
+                    <div id="chord-current" class="chord-card chord-card--current" aria-live="polite" aria-atomic="true">
+                        <div class="chord-card-label">Current Chord</div>
+                        <div class="chord-card-name chord-card-name--hero" data-chord-name>—</div>
+                        <div class="chord-card-voicing" data-chord-voicing></div>
+                        <div class="chord-progress-track" aria-hidden="true">
+                            <div class="chord-progress-fill" id="chord-progress-fill"></div>
                         </div>
-                        <div id="trans-settings" class="panel-group hidden" style="margin-left:auto;">
-                            <div style="display:flex; align-items:center; gap:16px;">
-                                <label class="panel-label" style="display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; margin:0;">
-                                    <input type="checkbox" id="chk-auto-transpose" checked onchange="handleAutoTransposeChange()">
-                                    Auto-Pitch-Shift Playback
-                                </label>
-                                <span id="easy-key-text" class="easy-key-badge">-</span>
-                            </div>
-                        </div>
                     </div>
-                </div>
 
-                <div class="waveform-box">
-                    <div class="wf-wrap" onclick="handleWfClick(event)">
-                        <canvas id="wf-canvas"></canvas>
-                        <div id="playhead"></div>
+                    <div id="chord-next" class="chord-card chord-card--next" title="Click to skip ahead">
+                        <div class="chord-card-label">Next</div>
+                        <div class="chord-card-name" data-chord-name>—</div>
                     </div>
-                    <div class="playback-bar">
-                        <button class="play-btn" onclick="togglePlay()">
-                            <svg id="play-icon" width="14" height="14" viewBox="0 0 16 16" fill="white"><path d="M5 3l9 5-9 5V3z"/></svg>
-                        </button>
-                        <span id="cur-time" class="time-disp">0:00</span>
-                        <input type="range" id="seek-bar" class="seek-bar" min="0" step="0.1" value="0" oninput="handleSeek(this.value)">
-                        <span id="dur-time" class="time-disp">0:00</span>
-                    </div>
+
                 </div>
             </div>
+        </section>
 
-            <!-- MIDDLE: Chord Hero V3 (Anchored Hands) -->
-            <div class="chord-hero-section">
-                <!-- Left Hand Guide -->
-                <div id="lh-guide" class="hand-guide-box">
-                    <div id="lh-diagram"></div>
-                    <span class="hand-label">Left Hand</span>
-                </div>
+        <!-- Right Hand Column (Harmony) -->
+        <aside id="ws-hand-right" class="ws-hand-col ws-hand-col--right" aria-label="Right hand harmony guidance">
+            <div class="ws-hand-label">Right Hand (Harmony)</div>
+            <div id="ws-rh-svg" class="ws-hand-svg"></div>
+            <div id="ws-rh-chips" class="ws-finger-chips"><span class="ws-chip-idle">—</span></div>
+        </aside>
 
-                <!-- Chord Center -->
-                <div class="chord-hero-box">
-                    <div class="chord-hero" id="active-chord">N</div>
-                    <div class="chord-notes-list" id="active-notes-list"></div>
-                </div>
+    </main>
 
-                <!-- Right Hand Guide -->
-                <div id="rh-guide" class="hand-guide-box">
-                    <div id="rh-diagram"></div>
-                    <span class="hand-label">Right Hand</span>
-                </div>
-            </div>
-
-            <!-- TIMELINE -->
-            <div class="timeline-bar">
-                <div class="timeline-scroll" id="timeline"></div>
-            </div>
-        </div>
-
-        <!-- BOTTOM: Fixed Piano Dock -->
-        <div class="piano-dock">
-            <div id="piano-keyboard"></div>
-        </div>
+    <!-- 3. PERSISTENT PIANO -->
+    <div class="ws-piano" id="ws-piano">
+        <div id="piano-keyboard"></div>
     </div>
-</main>
 
-<audio id="audio-el"></audio>
+    <!-- 4. PLAYBACK BAR / WAVEFORM & TRANSPORT -->
+    <footer class="ws-playback">
+        <div class="ws-waveform" id="wf-wrap" onclick="handleWfClick(event)" title="Click to seek">
+            <canvas id="wf-canvas"></canvas>
+            <div id="playhead"></div>
+        </div>
+        <div class="ws-transport-row">
+            <button class="play-btn" id="main-play-btn" onclick="handleTogglePlay()" aria-label="Play / Pause">
+                <svg id="play-icon" width="12" height="12" viewBox="0 0 16 16" fill="white"><path d="M5 3l9 5-9 5V3z"/></svg>
+            </button>
+            <span id="cur-time" class="time-disp">0:00</span>
+            <input type="range" id="seek-bar" class="seek-bar" min="0" step="0.05" value="0" oninput="handleSeek(this.value)" aria-label="Seek">
+            <span id="dur-time" class="time-disp">0:00</span>
+        </div>
+    </footer>
 
+</div><!-- #workspace -->
+
+<!-- ══════════════════════════════════════════════
+     CORE SCRIPTS
+     ══════════════════════════════════════════════ -->
+<!-- Theory & Fingering Engines -->
 <script src="/js/engine/musicTheoryFormatter.js"></script>
 <script src="/js/engine/pianoFingeringEngine.js"></script>
-<script src="/js/animations/handAnimator.js"></script>
+<script src="/js/engine/chordTransitionEngine.js"></script>
+<script src="/js/engine/currentChordEngine.js"></script>
+
+<!-- UI Components -->
 <script src="/js/ui/handDiagrams.js"></script>
 <script src="/js/ui/pianoKeyboard.js"></script>
-<script src="/js/ui/keyboardOverlayManager.js"></script>
+<script src="/js/ui/workspaceChordTimeline.js"></script>
+<script src="/js/ui/workspaceHandController.js"></script>
+
+<!-- Audio & Clock Infrastructure -->
+<script src="/js/audio/pianoPlaybackService.js"></script>
+<script src="/js/audio/originalChordPlaybackController.js"></script>
+<script src="/js/audio/beginnerChordPlaybackController.js"></script>
+<script src="/js/audio/unifiedPianoPlaybackController.js"></script>
+<script src="/js/audio/playbackClock.js"></script>
+<script src="/js/audio/songAudioController.js"></script>
 
 <script>
-    'use strict';
-    let DATA = null, audioURL = null, audioBuffer = null, audioSource = null, audioCtx = null;
-    let isPlaying = false, playStartTime = 0, playOffset = 0, rafId = null, activeChordIdx = -1;
-    let piano = null;
-    let currentMode = 'original';
-    let autoPitchShift = true;
+'use strict';
 
-    window.onload = () => {
-        piano = new PianoKeyboard('piano-keyboard');
-        document.getElementById('lh-diagram').innerHTML = HandDiagrams.getHandMarkup('LH');
-        document.getElementById('rh-diagram').innerHTML = HandDiagrams.getHandMarkup('RH');
-        document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); togglePlay(); } });
+// ─── App State ────────────────────────────────────────────────────────────────
+let DATA = null;
+let audioURL = null;
+let currentFile = null;
+let piano = null;
+let currentChordEngine = null;
+
+// Active chord dataset mode: 'simplified' | 'original'
+let activeMode = 'simplified';
+
+let analysisPollInterval = null;
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+window.onload = () => {
+    piano = new PianoKeyboard('piano-keyboard');
+    window.piano = piano;
+
+    PlaybackClock.subscribe(snap => updateClockUI(snap));
+
+    document.addEventListener('keydown', e => {
+        if (e.code === 'Space' && DATA) { e.preventDefault(); handleTogglePlay(); }
+    });
+
+    document.getElementById('file-input').onchange = e => {
+        if (e.target.files[0]) handleFile(e.target.files[0]);
     };
 
-    function showScreen(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.getElementById('hdr-actions').classList.toggle('hidden', id !== 'results-screen');
-    }
+    document.getElementById('upload-screen').addEventListener('dragover', e => e.preventDefault());
+    document.getElementById('upload-screen').addEventListener('drop', e => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file) handleFile(file);
+    });
+};
 
-    function resetApp() {
-        if (isPlaying) pauseAudio();
-        if (audioCtx) { try { audioCtx.close(); } catch(e) {} audioCtx = null; }
-        if (audioURL) { URL.revokeObjectURL(audioURL); audioURL = null; }
-        DATA = null; audioBuffer = null; isPlaying = false; playOffset = 0; activeChordIdx = -1;
-        currentMode = 'original';
-        document.getElementById('file-input').value = '';
-        showScreen('upload-screen');
-    }
+// ─── Screen routing ───────────────────────────────────────────────────────────
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(id);
+    if (target) target.classList.add('active');
+    const ws = document.getElementById('workspace');
+    if (ws) ws.classList.toggle('hidden', id !== 'workspace');
+}
 
-    const fileInput = document.getElementById('file-input');
-    fileInput.onchange = e => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+// ─── Analysis error ───────────────────────────────────────────────────────────
+function showAnalysisError(detail) {
+    if (analysisPollInterval) { clearInterval(analysisPollInterval); analysisPollInterval = null; }
+    document.getElementById('prog-bar-container')?.classList.add('hidden');
+    document.getElementById('prog-msg')?.classList.add('hidden');
+    document.getElementById('prog-error-box')?.classList.remove('hidden');
+    const det = document.getElementById('prog-error-detail');
+    if (det) det.textContent = detail || 'An unexpected error occurred during audio processing.';
+}
 
-    function handleFile(file) {
-        resetApp();
-        audioURL = URL.createObjectURL(file);
-        document.getElementById('prog-file-name').textContent = file.name;
-        showScreen('analysis-screen');
-        const fd = new FormData(); fd.append('file', file);
-        const poll = () => {
-            fetch('/progress').then(r => r.json()).then(p => {
-                document.getElementById('prog-bar').style.width = p.pct + '%';
-                document.getElementById('prog-msg').textContent = p.msg;
-            });
-            fetch('/result').then(r => r.json()).then(res => {
-                if (res.ready === false) return;
-                clearInterval(interval);
-                DATA = res; initResults();
-            });
+// ─── Reset / New Song ─────────────────────────────────────────────────────────
+function resetApp() {
+    if (analysisPollInterval) { clearInterval(analysisPollInterval); analysisPollInterval = null; }
+
+    PlaybackClock.stop();
+    SongAudioController.stop();
+    UnifiedPianoPlaybackController.stop();
+    PianoPlaybackService.stopAll();
+
+    if (window.WorkspaceChordTimeline) WorkspaceChordTimeline.reset();
+    if (window.WorkspaceHandController) WorkspaceHandController.reset();
+    if (currentChordEngine) { currentChordEngine.clear(); currentChordEngine = null; }
+    if (piano) { piano.voicing = null; piano.applyVoicingDOM(); }
+
+    if (audioURL) { URL.revokeObjectURL(audioURL); audioURL = null; }
+    DATA = null; currentFile = null;
+    activeMode = 'simplified';
+
+    document.getElementById('file-input').value = '';
+
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        const isSimp = (btn.dataset.mode === 'simplified' || btn.dataset.mode === 'simple');
+        btn.classList.toggle('active', isSimp);
+        btn.setAttribute('aria-selected', isSimp);
+    });
+
+    showScreen('upload-screen');
+}
+
+// ─── File handling ────────────────────────────────────────────────────────────
+function handleFile(file) {
+    resetApp();
+    currentFile = file;
+    audioURL = URL.createObjectURL(file);
+
+    document.getElementById('prog-file-name').textContent = file.name;
+    document.getElementById('prog-bar').style.width = '5%';
+    document.getElementById('prog-msg').textContent = 'Uploading audio file...';
+    document.getElementById('prog-bar-container')?.classList.remove('hidden');
+    document.getElementById('prog-msg')?.classList.remove('hidden');
+    document.getElementById('prog-error-box')?.classList.add('hidden');
+
+    showScreen('analysis-screen');
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    let consecutiveFailures = 0;
+    const poll = () => {
+        fetch('/progress')
+            .then(r => r.json())
+            .then(p => {
+                consecutiveFailures = 0;
+                if (p.pct !== undefined) document.getElementById('prog-bar').style.width = Math.max(5, p.pct) + '%';
+                if (p.msg) document.getElementById('prog-msg').textContent = p.msg;
+            })
+            .catch(() => { if (++consecutiveFailures > 10) showAnalysisError('Connection to backend server lost.'); });
+
+        fetch('/result')
+            .then(r => r.json())
+            .then(res => {
+                if (!res) return;
+                if (res.error) { showAnalysisError(res.error); return; }
+                if (res.ready === true) {
+                    if (analysisPollInterval) { clearInterval(analysisPollInterval); analysisPollInterval = null; }
+                    DATA = res;
+                    initResults(res);
+                }
+            })
+            .catch(() => {});
+    };
+
+    if (analysisPollInterval) clearInterval(analysisPollInterval);
+    analysisPollInterval = setInterval(poll, 800);
+
+    fetch('/analyze', { method: 'POST', body: fd })
+        .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(`Server ${r.status}: ${t}`); }); return r.json(); })
+        .catch(err => showAnalysisError(`Upload failed: ${err.message}`));
+}
+
+// ─── initResults — called once after successful analysis ──────────────────────
+async function initResults(data) {
+    if (data) DATA = data;
+    try {
+        if (!DATA) throw new Error('No analysis data provided');
+
+        // Build canonical SongTimeline
+        const timeline = {
+            duration: DATA.duration || 0,
+            metadata: {
+                tempo: DATA.tempo || 120,
+                key: DATA.key || 'C',
+                key_full: DATA.key_full || 'C Major',
+                easy_key_full: DATA.easy_key_full || DATA.key_full || 'C Major'
+            },
+            originalChords: (DATA.chords || []).map(c => ({
+                startTime: c.time,
+                endTime: c.end !== undefined ? c.end : c.time + 2.0,
+                chordName: c.chord,
+                notes: DATA.chord_data && DATA.chord_data[c.chord] ? DATA.chord_data[c.chord].notes : [0, 4, 7],
+                confidence: c.confidence || 0.9
+            })),
+            beginnerChords: (DATA.beginner_chords || DATA.chords || []).map(c => ({
+                startTime: c.time,
+                endTime: c.end !== undefined ? c.end : c.time + 2.0,
+                chordName: c.chord,
+                notes: DATA.chord_data && DATA.chord_data[c.chord] ? DATA.chord_data[c.chord].notes : [0, 4, 7],
+                confidence: c.confidence || 0.9
+            }))
         };
-        const interval = setInterval(poll, 800);
-        fetch('/analyze', { method: 'POST', body: fd });
+        DATA.timeline = timeline;
+
+        PlaybackClock.setDuration(DATA.duration || 0);
+        UnifiedPianoPlaybackController.loadTimeline(timeline);
+        UnifiedPianoPlaybackController.bindClock(PlaybackClock);
+
+        currentChordEngine = new CurrentChordEngine(PlaybackClock);
+        currentChordEngine.loadTimeline(timeline);
+        currentChordEngine.setMode('beginner');
+
+        // Mount WorkspaceChordTimeline
+        if (window.WorkspaceChordTimeline) {
+            WorkspaceChordTimeline.init({
+                prevEl:    document.getElementById('chord-prev'),
+                curEl:     document.getElementById('chord-current'),
+                nextEl:    document.getElementById('chord-next'),
+                trackEl:   document.getElementById('chord-track'),
+                viewport:  document.getElementById('chord-viewport'),
+                fillEl:    document.getElementById('chord-progress-fill'),
+                onSeek:    t => PlaybackClock.seek(t)
+            });
+            WorkspaceChordTimeline.loadChords(timeline.beginnerChords);
+        }
+
+        // Inject hand SVGs once
+        if (window.HandDiagrams) {
+            const lhEl = document.getElementById('ws-lh-svg');
+            const rhEl = document.getElementById('ws-rh-svg');
+            if (lhEl && !lhEl.querySelector('svg')) lhEl.innerHTML = HandDiagrams.getHandMarkup('LH');
+            if (rhEl && !rhEl.querySelector('svg')) rhEl.innerHTML = HandDiagrams.getHandMarkup('RH');
+        }
+        if (window.WorkspaceHandController) WorkspaceHandController.init();
+
+        if (currentFile) SongAudioController.loadFile(currentFile).catch(err => console.warn('[Audio] Load:', err));
+        else if (audioURL) SongAudioController.load(audioURL).catch(err => console.warn('[Audio] Load:', err));
+        SongAudioController.bindClock(PlaybackClock);
+
+        document.getElementById('dur-time').textContent = fmtTime(DATA.duration || 0);
+        document.getElementById('seek-bar').max = DATA.duration || 0;
+
+        _applyModeData('simplified');
+
+        showScreen('workspace');
+        document.getElementById('workspace').classList.remove('hidden');
+
+        setTimeout(() => { try { renderWaveform(); } catch (e) { console.warn(e); } }, 300);
+
+    } catch (err) {
+        console.error('[HotChords] initResults failed:', err);
+        showAnalysisError('Failed to display results: ' + err.message);
+    }
+}
+
+// ─── Mode Switching: Simplified vs Original ──────────────────────────────────
+function setMode(newMode) {
+    const normalized = (newMode === 'simple' || newMode === 'simplified') ? 'simplified' : 'original';
+    if (normalized === activeMode && DATA) return;
+    activeMode = normalized;
+
+    const ws = document.getElementById('workspace');
+    if (ws) ws.dataset.mode = normalized;
+
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        const btnMode = btn.dataset.mode;
+        const isActive = (btnMode === normalized) || (normalized === 'simplified' && btnMode === 'simple');
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive);
+    });
+
+    if (!DATA) return;
+    _applyModeData(normalized);
+}
+
+function _applyModeData(mode) {
+    if (!DATA || !DATA.timeline) return;
+    const timeline = DATA.timeline;
+    const isOrig = (mode === 'original');
+
+    const chords = isOrig ? timeline.originalChords : timeline.beginnerChords;
+    const pianoMode = isOrig
+        ? (window.PianoPlaybackMode ? PianoPlaybackMode.ORIGINAL_CHORDS : 'ORIGINAL_CHORDS')
+        : (window.PianoPlaybackMode ? PianoPlaybackMode.BEGINNER_CHORDS : 'BEGINNER_CHORDS');
+    const keyDisplay = isOrig
+        ? (DATA.key_full || 'C Major')
+        : (DATA.easy_key_full || DATA.key_full || 'C Major');
+
+    const keyEl = document.getElementById('val-key');
+    if (keyEl) keyEl.textContent = keyDisplay;
+
+    const bpmEl = document.getElementById('val-bpm');
+    const sigEl = document.getElementById('val-sig');
+    const trackEl = document.getElementById('res-file-name');
+    if (bpmEl) bpmEl.textContent = Math.round(DATA.tempo || 120);
+    if (sigEl) sigEl.textContent = DATA.time_sig || '4/4';
+    if (trackEl) trackEl.textContent = DATA.file || 'Audio Track';
+
+    // Update WorkspaceChordTimeline instantly
+    if (window.WorkspaceChordTimeline) {
+        WorkspaceChordTimeline.loadChords(chords);
     }
 
-    function initResults() {
-        document.getElementById('val-key').textContent = DATA.key_full;
-        document.getElementById('val-bpm').textContent = Math.round(DATA.tempo);
-        document.getElementById('val-sig').textContent = DATA.time_sig;
-        document.getElementById('res-file-name').textContent = DATA.file;
-        document.getElementById('dur-time').textContent = fmtTime(DATA.duration);
-        document.getElementById('seek-bar').max = DATA.duration;
-        
-        // Update Transposition options and banners
-        const transDiv = document.getElementById('trans-settings');
-        if (DATA.transpose_offset !== 0) {
-            transDiv.classList.remove('hidden');
-            const sign = DATA.transpose_offset > 0 ? '+' : '';
-            document.getElementById('easy-key-text').textContent = `Easy Key: ${DATA.easy_key_full} (${sign}${DATA.transpose_offset})`;
-        } else {
-            transDiv.classList.add('hidden');
-        }
-        
-        // Reset check state and mode
-        document.getElementById('chk-auto-transpose').checked = autoPitchShift;
-        setPracticeMode('original');
-        
-        showScreen('results-screen');
-        setTimeout(() => { renderWaveform(); renderTimeline(); updateUI(0); }, 300);
-        loadAudio();
+    // Sync CurrentChordEngine
+    if (currentChordEngine) {
+        currentChordEngine.setMode(isOrig ? 'original' : 'beginner');
     }
 
-    function loadAudio() {
-        fetch(audioURL).then(r => r.arrayBuffer()).then(buf => {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            audioCtx.decodeAudioData(buf, decoded => { audioBuffer = decoded; });
-        });
+    // Switch piano playback mode
+    try {
+        UnifiedPianoPlaybackController.switchMode(pianoMode);
+    } catch (e) {
+        console.warn('[Mode] switchMode:', e);
     }
 
-    function togglePlay() { isPlaying ? pauseAudio() : playAudio(playOffset); }
-    
-    function playAudio(offset) {
-        if (!audioBuffer) return;
-        if (audioSource) { try { audioSource.stop(); } catch(e) {} }
-        audioSource = audioCtx.createBufferSource();
-        audioSource.buffer = audioBuffer; 
-        audioSource.connect(audioCtx.destination);
-        
-        // Apply pitch-shifting in beginner mode if enabled
-        if (currentMode === 'beginner' && autoPitchShift && DATA && DATA.transpose_offset) {
-            audioSource.detune.value = DATA.transpose_offset * 100;
-        } else {
-            audioSource.detune.value = 0;
-        }
-        
-        playOffset = offset; playStartTime = audioCtx.currentTime;
-        audioSource.start(0, offset); isPlaying = true; updatePlayIcon();
-        rafId = requestAnimationFrame(updateFrame);
-    }
-    
-    function pauseAudio() {
-        if (!isPlaying) return;
-        playOffset = getCurrentTime();
-        if (audioSource) { try { audioSource.stop(); } catch(e) {} }
-        isPlaying = false; updatePlayIcon(); cancelAnimationFrame(rafId);
-    }
-    
-    function updatePlaybackDetune() {
-        if (audioSource && audioSource.detune) {
-            if (currentMode === 'beginner' && autoPitchShift && DATA && DATA.transpose_offset) {
-                audioSource.detune.setValueAtTime(DATA.transpose_offset * 100, audioCtx.currentTime);
-            } else {
-                audioSource.detune.setValueAtTime(0, audioCtx.currentTime);
-            }
-        }
-    }
-    
-    function setPracticeMode(mode) {
-        currentMode = mode;
-        activeChordIdx = -1; // Force immediate UI refresh
-        
-        const btnOrig = document.getElementById('btn-mode-orig');
-        const btnBeg = document.getElementById('btn-mode-beg');
-        
-        if (mode === 'beginner') {
-            btnBeg.classList.add('active');
-            btnOrig.classList.remove('active');
-            if (DATA) {
-                document.getElementById('val-key').textContent = DATA.easy_key_full;
-            }
-        } else {
-            btnOrig.classList.add('active');
-            btnBeg.classList.remove('active');
-            if (DATA) {
-                document.getElementById('val-key').textContent = DATA.key_full;
-            }
-        }
-        
-        renderTimeline();
-        updatePlaybackDetune();
-        
-        // Trigger repaint for current playhead
-        const t = getCurrentTime();
-        updateUI(t);
-    }
-    
-    function handleAutoTransposeChange() {
-        autoPitchShift = document.getElementById('chk-auto-transpose').checked;
-        updatePlaybackDetune();
-    }
-    
-    function getCurrentTime() { return isPlaying ? playOffset + (audioCtx.currentTime - playStartTime) : playOffset; }
-    function handleSeek(val) { const t = parseFloat(val); playOffset = t; isPlaying ? playAudio(t) : updateUI(t); }
-    function handleWfClick(e) { const pct = e.offsetX / e.currentTarget.clientWidth; handleSeek(pct * DATA.duration); }
-    
-    function updatePlayIcon() {
-        const pauseIcon = '<rect x="4" y="3" width="3" height="10" rx="1" fill="white"/><rect x="9" y="3" width="3" height="10" rx="1" fill="white"/>';
-        const playIcon = '<path d="M5 3l9 5-9 5V3z" fill="white"/>';
-        document.getElementById('play-icon').innerHTML = isPlaying ? pauseIcon : playIcon;
-    }
-    
-    function updateFrame() { if (!isPlaying) return; const t = getCurrentTime(); if (t >= DATA.duration) { pauseAudio(); playOffset = 0; updateUI(0); return; } updateUI(t); rafId = requestAnimationFrame(updateFrame); }
+    // Immediately update hands & piano at current time
+    _syncHandsAndPiano(PlaybackClock.currentTime);
+}
 
-    function updateUI(t) {
-        document.getElementById('seek-bar').value = t;
-        document.getElementById('cur-time').textContent = fmtTime(t);
-        document.getElementById('playhead').style.left = (t / DATA.duration * 100) + '%';
-        
-        const chords = (currentMode === 'beginner') ? DATA.beginner_chords : DATA.chords;
-        let idx = 0;
-        for (let i = 0; i < chords.length; i++) { if (chords[i].time <= t) idx = i; else break; }
-        
-        if (idx !== activeChordIdx) {
-            activeChordIdx = idx;
-            const c = chords[idx];
-            const name = MusicTheoryFormatter.normalizeChordName(c.chord);
-            document.getElementById('active-chord').textContent = name === 'N' ? '-' : name;
-            const cd = DATA.chord_data[c.chord]; 
-            if (cd) {
-                document.getElementById('active-notes-list').innerHTML = cd.note_names.map(n => `<span>${n}</span>`).join('');
-                piano.setChord(c.chord, cd.notes);
-            } else {
-                document.getElementById('active-notes-list').innerHTML = '';
-                piano.setChord(null, []);
-            }
-            document.querySelectorAll('.tm-item').forEach((el, i) => { el.classList.toggle('active', i === idx); if (i === idx) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); });
+function _syncHandsAndPiano(currentTime) {
+    if (!currentChordEngine || !piano) return;
+    const chordState = currentChordEngine.getState(currentTime);
+    if (chordState && chordState.currentChord) {
+        const voicing = PianoFingeringEngine.getChordVoicing(
+            chordState.currentChord.chordName || chordState.currentChord.chord,
+            chordState.currentChord.notes
+        );
+        piano.voicing = voicing;
+        piano.applyVoicingDOM();
+
+        if (window.WorkspaceHandController) {
+            WorkspaceHandController.update(
+                chordState.currentChord.chordName || chordState.currentChord.chord,
+                chordState.currentChord.notes,
+                voicing
+            );
         }
+    } else {
+        if (piano.voicing !== null) {
+            piano.voicing = null;
+            piano.applyVoicingDOM();
+        }
+        if (window.WorkspaceHandController) {
+            WorkspaceHandController.reset();
+        }
+    }
+}
+
+// ─── Playback controls ────────────────────────────────────────────────────────
+function handleTogglePlay() {
+    if (PlaybackClock.state === 'PLAYING') {
+        PlaybackClock.pause();
+    } else {
+        PianoPlaybackService.resume();
+        PlaybackClock.play();
+    }
+}
+
+function handleStop()    { PlaybackClock.stop(); }
+function handleRestart() { PianoPlaybackService.resume(); PlaybackClock.restart(); }
+function handleSeek(val) { PlaybackClock.seek(parseFloat(val)); }
+
+function handleToggleSustain() {
+    if (window.PianoPlaybackService) updateSustainUI(window.PianoPlaybackService.toggleSustain());
+}
+
+function updateSustainUI(isSustain) {
+    const btn = document.getElementById('btn-sustain');
+    if (!btn) return;
+    btn.textContent = isSustain ? 'Sustain ON' : 'Sustain OFF';
+    btn.classList.toggle('btn-sustain-active', isSustain);
+}
+
+function handleWfClick(e) {
+    if (DATA) handleSeek(e.offsetX / e.currentTarget.clientWidth * DATA.duration);
+}
+
+function setSpeed(rate) {
+    PlaybackClock.setPlaybackRate(rate);
+    document.querySelectorAll('.speed-btn').forEach(btn => btn.classList.remove('active'));
+    if (rate === 1.0)  document.getElementById('spd-100')?.classList.add('active');
+    if (rate === 0.75) document.getElementById('spd-075')?.classList.add('active');
+    if (rate === 0.5)  document.getElementById('spd-050')?.classList.add('active');
+}
+
+// ─── Clock subscriber (rAF — runs every frame during playback) ────────────────
+function updateClockUI(snap) {
+    const seekBar = document.getElementById('seek-bar');
+    const curTime = document.getElementById('cur-time');
+    const playhead = document.getElementById('playhead');
+    const playIcon = document.getElementById('play-icon');
+
+    if (seekBar) seekBar.value = snap.currentTime;
+    if (curTime) curTime.textContent = fmtTime(snap.currentTime);
+    if (DATA && DATA.duration > 0 && playhead) {
+        playhead.style.left = (snap.currentTime / DATA.duration * 100) + '%';
+    }
+    if (playIcon) {
+        playIcon.innerHTML = snap.state === 'PLAYING'
+            ? '<rect x="4" y="3" width="3" height="10" rx="1"/><rect x="9" y="3" width="3" height="10" rx="1"/>'
+            : '<path d="M5 3l9 5-9 5V3z"/>';
     }
 
-    function renderWaveform() {
+    // Chord timeline update
+    if (window.WorkspaceChordTimeline) {
+        WorkspaceChordTimeline.update(snap.currentTime);
+    }
+
+    // Hands and piano update
+    _syncHandsAndPiano(snap.currentTime);
+}
+
+// ─── Waveform renderer ────────────────────────────────────────────────────────
+function renderWaveform() {
+    try {
         const canvas = document.getElementById('wf-canvas');
+        if (!canvas || !canvas.parentElement || !audioURL) return;
         const W = canvas.parentElement.clientWidth, H = canvas.parentElement.clientHeight;
+        if (W <= 0 || H <= 0) return;
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
-        const blue = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim();
-        fetch(audioURL).then(r => r.arrayBuffer()).then(buf => {
-            const ac = new AudioContext();
-            ac.decodeAudioData(buf, decoded => {
-                const data = decoded.getChannelData(0);
-                const step = Math.ceil(data.length / W);
-                const amp = H / 2;
-                ctx.beginPath(); ctx.strokeStyle = blue; ctx.lineWidth = 1.5;
-                for (let i = 0; i < W; i++) {
-                    let min = 1, max = -1;
-                    for (let j = 0; j < step; j++) { const v = data[(i * step) + j]; if (v < min) min = v; if (v > max) max = v; }
-                    ctx.moveTo(i, amp + min * amp); ctx.lineTo(i, amp + max * amp);
-                }
-                ctx.stroke(); ac.close();
-            });
-        });
-    }
+        const blue = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() || '#0071E3';
 
-    function renderTimeline() {
-        const container = document.getElementById('timeline');
-        const chords = (currentMode === 'beginner') ? DATA.beginner_chords : DATA.chords;
-        container.innerHTML = chords.map((c, i) => `
-            <div class="tm-item" onclick="handleSeek(${c.time})">
-                <div class="tm-chord">${MusicTheoryFormatter.normalizeChordName(c.chord)}</div>
-                <div class="tm-time">${fmtTime(c.time)}</div>
-            </div>
-        `).join('');
+        fetch(audioURL)
+            .then(r => r.arrayBuffer())
+            .then(buf => {
+                const ac = new (window.AudioContext || window.webkitAudioContext)();
+                ac.decodeAudioData(buf, decoded => {
+                    try {
+                        const data = decoded.getChannelData(0);
+                        const step = Math.ceil(data.length / W);
+                        const amp = H / 2;
+                        ctx.beginPath();
+                        ctx.strokeStyle = blue;
+                        ctx.lineWidth = 1.5;
+                        for (let i = 0; i < W; i++) {
+                            let min = 1, max = -1;
+                            for (let j = 0; j < step; j++) {
+                                const v = data[(i * step) + j];
+                                if (v < min) min = v;
+                                if (v > max) max = v;
+                            }
+                            ctx.moveTo(i, amp + min * amp);
+                            ctx.lineTo(i, amp + max * amp);
+                        }
+                        ctx.stroke();
+                    } finally {
+                        ac.close();
+                    }
+                }, err => console.warn('[Waveform] decodeAudioData:', err));
+            })
+            .catch(err => console.warn('[Waveform] fetch:', err));
+    } catch (e) {
+        console.warn('[Waveform] error:', e);
     }
+}
 
-    function fmtTime(s) { const m = Math.floor(s / 60), sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}`; }
+// ─── Utility ──────────────────────────────────────────────────────────────────
+function fmtTime(s) {
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+}
 </script>
 </body>
 </html>
