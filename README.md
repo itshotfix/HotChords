@@ -9,26 +9,28 @@
 
 ---
 
-## Install HotChords
+## Install HotChords (Desktop)
 
-HotChords is **free, open-source, and runs 100% locally on your machine**. No manual installation of Python, Node.js, virtual environments, or AI dependencies is required for general users.
+HotChords is **free, open-source, and runs 100% locally on your computer**. No manual installation of Python, Node.js, virtual environments, or AI dependencies is required for general users.
 
-### Download
+### Direct Installer Downloads
 
-* **Windows (64-bit)**: [Download HotChords v0.3 for Windows](https://github.com/itshotfix/HotChords/releases/tag/v0.3.0) *(Installer `.exe`)*
-* **macOS (Apple Silicon — M1/M2/M3/M4)**: [Download HotChords v0.3 for Apple Silicon](https://github.com/itshotfix/HotChords/releases/tag/v0.3.0) *(Disk Image `.dmg`)*
-* **macOS (Intel)**: [Download HotChords v0.3 for Intel Mac](https://github.com/itshotfix/HotChords/releases/tag/v0.3.0) *(Disk Image `.dmg`)*
+| Operating System | Installer File | Format | Download Link |
+| :--- | :--- | :---: | :---: |
+| **Windows** (64-bit) | `HotChords-v0.3.0-Windows-x64-Setup.exe` | `.exe` | [**Direct Download (.exe)**](https://github.com/itshotfix/HotChords/releases/download/v0.3.0/HotChords-v0.3.0-Windows-x64-Setup.exe) |
+| **macOS** (Apple Silicon — M1/M2/M3/M4) | `HotChords-v0.3.0-macOS-AppleSilicon.dmg` | `.dmg` | [**Direct Download (.dmg)**](https://github.com/itshotfix/HotChords/releases/download/v0.3.0/HotChords-v0.3.0-macOS-AppleSilicon.dmg) |
+| **macOS** (Intel x86_64) | `HotChords-v0.3.0-macOS-Intel.dmg` | `.dmg` | [**Direct Download (.dmg)**](https://github.com/itshotfix/HotChords/releases/download/v0.3.0/HotChords-v0.3.0-macOS-Intel.dmg) |
 
 ### Quick Start
-1. **Download & Install** the package for your operating system.
-2. **Launch HotChords** from your Applications / Start Menu.
-3. The application will start locally and open automatically in your default browser at `http://hotchords.localhost:5500` (or `http://localhost:5500`).
+1. **Download the installer** for your operating system from the table above.
+2. **Run the installer / open disk image** and drag HotChords to Applications (or follow Windows Setup wizard).
+3. **Launch HotChords**. It will start the local engine and open automatically in your browser at `http://hotchords.localhost:5500` (or `http://localhost:5500`).
 
 ---
 
 ## What HotChords Does
 
-HotChords turns an uploaded song into an interactive piano chord-learning workstation. It provides clear, real-time answers to the core questions:
+HotChords turns an uploaded song into an interactive desktop piano chord-learning workstation. It provides clear, real-time answers to the core questions:
 
 > **"What chord should I play right now, which keys do I press, and which fingers should I use?"**
 
@@ -69,7 +71,7 @@ Transparently tracks actual DSP stages (demixing, Chroma CQT extraction, beat tr
 ---
 
 ### 3. The Single Workspace (Interactive Music Stand)
-A permanent, single-screen workspace designed as an immersive music stand.
+A permanent, single-screen workspace designed as an immersive desktop music stand.
 
 ![Workspace](docs/screenshots/v0.3/03-workspace.png)
 
@@ -100,12 +102,6 @@ Synchronized Left Hand (bass foundation) and Right Hand (harmony triad) illustra
 
 ---
 
-### 7. Responsive Mobile Workspace
-Fluid layout reflows across desktop, tablet, and mobile viewports with zero horizontal clipping.
-
-![Mobile Workspace](docs/screenshots/v0.3/09-mobile.png)
-
----
 
 ## How It Works
 

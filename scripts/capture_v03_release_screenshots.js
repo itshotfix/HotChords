@@ -112,12 +112,6 @@ async function captureReleaseScreenshots() {
     await page.screenshot({ path: path.join(DOCS_SCREENSHOT_DIR, '08-hands-piano.png') });
     console.log('  ✓ Captured 08-hands-piano.png (1440x900)');
 
-    // 09: Mobile Workspace (390x844)
-    await page.setViewport({ width: 390, height: 844 });
-    await new Promise(r => setTimeout(r, 300));
-    await page.screenshot({ path: path.join(DOCS_SCREENSHOT_DIR, '09-mobile.png') });
-    console.log('  ✓ Captured 09-mobile.png (390x844)');
-
     await browser.close();
 
     console.log(`\n═════════════════════════════════════════════════════════════`);
