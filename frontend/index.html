@@ -12,18 +12,44 @@
 <body class="app-shell">
 
 <!-- ╔══════════════════════════════════════════╗
-     ║  UPLOAD SCREEN                           ║
+     ║  INITIAL / EMPTY STATE SCREEN            ║
      ╚══════════════════════════════════════════╝ -->
 <div id="upload-screen" class="screen active">
-    <div class="modal-box" onclick="document.getElementById('file-input').click()">
-        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:20px; opacity:0.9">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        <h2 style="font-size:22px; font-weight:700; margin-bottom:6px; letter-spacing:-0.5px;">Start your session</h2>
-        <p style="color:var(--text-muted); font-size:15px; font-weight:500;">Drop an audio file or click to browse</p>
-        <input type="file" id="file-input" class="hidden" accept=".mp3,.wav,.flac">
+    <div class="empty-landing-wrap">
+        
+        <!-- 1. Prominent HotChords Branding -->
+        <div class="empty-brand">
+            Hot<span>Chords</span>
+        </div>
+
+        <!-- 2. Headline -->
+        <h1 class="empty-headline">
+            Turn any song into<br>chords you can play.
+        </h1>
+
+        <!-- 3. Supporting Copy -->
+        <p class="empty-supporting">
+            Upload a song and HotChords will detect the chords and show you how to play them on piano.
+        </p>
+
+        <!-- 4. Upload Drop Target Card -->
+        <div id="drop-zone" class="empty-upload-card" onclick="document.getElementById('file-input').click()" role="button" tabindex="0" aria-label="Upload audio file">
+            <div class="upload-icon-circle" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+            </div>
+            <div class="upload-card-prompt">Drop your song here</div>
+            <div class="upload-card-sub">or click to browse</div>
+            <div class="upload-card-formats">MP3 · WAV · M4A</div>
+            <input type="file" id="file-input" class="hidden" accept=".mp3,.wav,.flac,.m4a,.ogg,.aac">
+        </div>
+
     </div>
 </div>
+
 
 <!-- ╔══════════════════════════════════════════╗
      ║  ANALYSIS SCREEN                         ║
@@ -206,13 +232,43 @@ window.onload = () => {
         if (e.target.files[0]) handleFile(e.target.files[0]);
     };
 
-    document.getElementById('upload-screen').addEventListener('dragover', e => e.preventDefault());
-    document.getElementById('upload-screen').addEventListener('drop', e => {
-        e.preventDefault();
-        const file = e.dataTransfer.files[0];
-        if (file) handleFile(file);
-    });
+    const dropZone = document.getElementById('drop-zone');
+    const uploadScreen = document.getElementById('upload-screen');
+
+    if (uploadScreen && dropZone) {
+        ['dragenter', 'dragover'].forEach(evt => {
+            uploadScreen.addEventListener(evt, e => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('drag-over');
+            });
+        });
+
+        ['dragleave', 'dragend'].forEach(evt => {
+            uploadScreen.addEventListener(evt, e => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('drag-over');
+            });
+        });
+
+        uploadScreen.addEventListener('drop', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        dropZone.addEventListener('keydown', e => {
+            if (e.code === 'Enter' || e.code === 'Space') {
+                e.preventDefault();
+                document.getElementById('file-input')?.click();
+            }
+        });
+    }
 };
+
 
 // ─── Screen routing ───────────────────────────────────────────────────────────
 function showScreen(id) {
