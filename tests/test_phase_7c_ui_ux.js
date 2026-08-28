@@ -365,10 +365,11 @@ function runAllTests() {
     test('20. Version number displayed', () => {
         const indexHtml = fs.readFileSync(path.join(__dirname, '../frontend/index.html'), 'utf8');
         assert.ok(
-            indexHtml.includes('v0.2') || indexHtml.includes('Ver 0.2') || indexHtml.includes('0.2.0'),
+            indexHtml.includes('v0.3') || indexHtml.includes('Ver 0.3') || indexHtml.includes('VER 0.3') || indexHtml.includes('0.3.0'),
             'Header contains project version string'
         );
     });
+
 
     console.log(`\nAll ${passed}/20 HotChords Phase 7C tests PASSED successfully!`);
 }

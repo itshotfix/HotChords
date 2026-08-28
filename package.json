@@ -1,7 +1,8 @@
 {
   "name": "hotchords",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "HotChords — Real-time interactive piano chord learning workstation",
+
   "main": "frontend/index.html",
   "scripts": {
     "test": "node tests/test_workspace_hands_and_timeline.js && node tests/test_phase_7c_ui_ux.js && node tests/test_phase_8_rearchitecture.js",

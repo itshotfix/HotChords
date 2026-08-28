@@ -21,7 +21,7 @@ from .timeline import (
     analysis_to_song_timeline,
 )
 
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.3.0"
 
 __all__ = [
     "APP_VERSION",

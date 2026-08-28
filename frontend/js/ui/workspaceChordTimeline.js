@@ -77,9 +77,10 @@
     }
 
     function _getLaneDistance() {
-        const width = _viewportEl ? _viewportEl.clientWidth : 600;
-        return Math.max(130, Math.min(280, Math.round(width * 0.28)));
+        const width = _viewportEl ? _viewportEl.clientWidth : 700;
+        return Math.max(160, Math.min(360, Math.round(width * 0.30)));
     }
+
 
     function _cancelAnimations() {
         for (let i = 0; i < _activeAnimations.length; i++) {
@@ -116,13 +117,13 @@
     function _applyRestingTransform(el, role, D) {
         if (!el) return;
         if (role === 'prev') {
-            el.style.transform = `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.55)`;
+            el.style.transform = `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.68)`;
             el.style.opacity = '0.45';
         } else if (role === 'current') {
-            el.style.transform = 'translate3d(-50%, -50%, 0) scale(1.08)';
+            el.style.transform = 'translate3d(-50%, -50%, 0) scale(1.18)';
             el.style.opacity = '1.0';
         } else if (role === 'next') {
-            el.style.transform = `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.55)`;
+            el.style.transform = `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.68)`;
             el.style.opacity = '0.45';
         }
     }
@@ -166,13 +167,12 @@
         incoming.className = 'chord-card chord-card--next';
         incoming.setAttribute('data-transient', 'true');
         incoming.innerHTML = `
-            <div class="chord-card-label">Next</div>
             <div class="chord-card-name" data-chord-name>${getName(incomingNextChord)}</div>
         `;
         incoming.style.position = 'absolute';
         incoming.style.top = '50%';
         incoming.style.left = '50%';
-        incoming.style.transform = `translate3d(calc(-50% + ${2 * D}px), -50%, 0) scale(0.35)`;
+        incoming.style.transform = `translate3d(calc(-50% + ${2 * D}px), -50%, 0) scale(0.40)`;
         incoming.style.opacity = '0';
 
         _trackEl.appendChild(incoming);
@@ -187,28 +187,29 @@
         const anims = [
             // 1. Prev exits left (-1D -> -2D)
             _prevEl.animate([
-                { transform: `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.55)`, opacity: 0.45 },
-                { transform: `translate3d(calc(-50% - ${2 * D}px), -50%, 0) scale(0.35)`, opacity: 0 }
+                { transform: `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.68)`, opacity: 0.45 },
+                { transform: `translate3d(calc(-50% - ${2 * D}px), -50%, 0) scale(0.40)`, opacity: 0 }
             ], animOptions),
 
             // 2. Current moves to prev (0 -> -1D)
             _curEl.animate([
-                { transform: `translate3d(-50%, -50%, 0) scale(1.08)`, opacity: 1.0 },
-                { transform: `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.55)`, opacity: 0.45 }
+                { transform: `translate3d(-50%, -50%, 0) scale(1.18)`, opacity: 1.0 },
+                { transform: `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.68)`, opacity: 0.45 }
             ], animOptions),
 
             // 3. Next moves to current (+1D -> 0)
             _nextEl.animate([
-                { transform: `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.55)`, opacity: 0.45 },
-                { transform: `translate3d(-50%, -50%, 0) scale(1.08)`, opacity: 1.0 }
+                { transform: `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.68)`, opacity: 0.45 },
+                { transform: `translate3d(-50%, -50%, 0) scale(1.18)`, opacity: 1.0 }
             ], animOptions),
 
             // 4. Incoming moves to next (+2D -> +1D)
             incoming.animate([
-                { transform: `translate3d(calc(-50% + ${2 * D}px), -50%, 0) scale(0.35)`, opacity: 0 },
-                { transform: `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.55)`, opacity: 0.45 }
+                { transform: `translate3d(calc(-50% + ${2 * D}px), -50%, 0) scale(0.40)`, opacity: 0 },
+                { transform: `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.68)`, opacity: 0.45 }
             ], animOptions)
         ];
+
 
         _activeAnimations = anims;
 

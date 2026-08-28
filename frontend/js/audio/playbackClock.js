@@ -7,8 +7,8 @@
  * - Original piano chords
  * - Beginner piano chords
  * - Chord highlighting
- * - Lyrics
  * - Piano fingering & hand animation
+
  * 
  * Architecture:
  * - Pure framework-agnostic JS (zero React dependencies).

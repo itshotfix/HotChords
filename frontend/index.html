@@ -12,65 +12,115 @@
 <body class="app-shell">
 
 <!-- ╔══════════════════════════════════════════╗
-     ║  INITIAL / EMPTY STATE SCREEN            ║
+     ║  1. UPLOAD SCREEN (Initial State)        ║
      ╚══════════════════════════════════════════╝ -->
-<div id="upload-screen" class="screen active">
-    <div class="empty-landing-wrap">
-        
-        <!-- 1. Prominent HotChords Branding -->
-        <div class="empty-brand">
-            Hot<span>Chords</span>
-        </div>
+<div id="upload-screen" class="screen app-stage-screen active">
+    <header class="app-shell-header">
+        <div class="header-brand" onclick="resetApp()" title="HotChords Home">Hot<span>Chords</span> <span class="header-version">VER 0.3</span></div>
+    </header>
 
-        <!-- 2. Headline -->
-        <h1 class="empty-headline">
-            Turn any song into<br>chords you can play.
-        </h1>
-
-        <!-- 3. Supporting Copy -->
-        <p class="empty-supporting">
-            Upload a song and HotChords will detect the chords and show you how to play them on piano.
-        </p>
-
-        <!-- 4. Upload Drop Target Card -->
-        <div id="drop-zone" class="empty-upload-card" onclick="document.getElementById('file-input').click()" role="button" tabindex="0" aria-label="Upload audio file">
-            <div class="upload-icon-circle" aria-hidden="true">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
+    <main class="upload-stage">
+        <div class="upload-content-wrap">
+            <div class="upload-text-group">
+                <h1 class="upload-headline">Turn any song into<br>chords you can play.</h1>
+                <p class="upload-subtext">Upload a song and HotChords will analyze it and show you how to play it on piano.</p>
             </div>
-            <div class="upload-card-prompt">Drop your song here</div>
-            <div class="upload-card-sub">or click to browse</div>
-            <div class="upload-card-formats">MP3 · WAV · M4A</div>
-            <input type="file" id="file-input" class="hidden" accept=".mp3,.wav,.flac,.m4a,.ogg,.aac">
-        </div>
 
-    </div>
+            <!-- Upload Drop Target Card -->
+            <div id="drop-zone" class="upload-drop-card" onclick="document.getElementById('file-input').click()" role="button" tabindex="0" aria-label="Upload song">
+                <div class="upload-icon-circle" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <div class="upload-prompt-title">Upload Song</div>
+                <div class="upload-prompt-sub">Drop your audio file here or <span class="browse-highlight">click to browse</span></div>
+                <div class="upload-formats-badge">MP3 · WAV · M4A · FLAC</div>
+                <input type="file" id="file-input" class="hidden" accept=".mp3,.wav,.flac,.m4a,.ogg,.aac">
+            </div>
+        </div>
+    </main>
 </div>
 
-
 <!-- ╔══════════════════════════════════════════╗
-     ║  ANALYSIS SCREEN                         ║
+     ║  2. PROCESSING / ANALYSIS SCREEN         ║
      ╚══════════════════════════════════════════╝ -->
-<div id="analysis-screen" class="screen">
-    <div class="modal-box" style="cursor:default; max-width:440px;">
-        <h3 id="prog-file-name" style="font-size:18px; font-weight:700; margin-bottom:16px; letter-spacing:-0.4px;">Analyzing audio...</h3>
-        <div id="prog-bar-container" class="prog-bar-wrap">
-            <div id="prog-bar" class="prog-bar-fill" style="width: 5%;"></div>
+<div id="analysis-screen" class="screen app-stage-screen">
+    <header class="app-shell-header">
+        <div class="header-brand" onclick="resetApp()" title="HotChords Home">Hot<span>Chords</span> <span class="header-version">VER 0.3</span></div>
+        <div class="header-processing-badge"><span class="badge-pulse-dot"></span> Analyzing audio</div>
+    </header>
+
+    <main class="processing-stage">
+        <div class="processing-content-wrap">
+            
+            <div class="processing-header-group">
+                <div class="processing-eyebrow">Analyzing your song</div>
+                <h2 id="prog-file-name" class="processing-song-title">Song.mp3</h2>
+            </div>
+
+            <!-- Animated Waveform Bars Activity -->
+            <div class="processing-waveform-activity" aria-hidden="true">
+                <span class="wave-tick t1"></span>
+                <span class="wave-tick t2"></span>
+                <span class="wave-tick t3"></span>
+                <span class="wave-tick t4"></span>
+                <span class="wave-tick t5"></span>
+                <span class="wave-tick t6"></span>
+                <span class="wave-tick t7"></span>
+                <span class="wave-tick t8"></span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div id="prog-bar-container" class="processing-prog-track">
+                <div id="prog-bar" class="processing-prog-bar" style="width: 5%;"></div>
+            </div>
+
+            <!-- Active Stage Message -->
+            <div id="prog-msg" class="processing-status-msg">Preparing audio...</div>
+
+            <!-- Live Pipeline Stage Milestones -->
+            <div class="pipeline-milestones-list">
+                <div id="stage-prep" class="milestone-row active">
+                    <span class="milestone-status-icon">●</span>
+                    <span class="milestone-label">Preparing audio & separation</span>
+                </div>
+                <div id="stage-feat" class="milestone-row pending">
+                    <span class="milestone-status-icon">○</span>
+                    <span class="milestone-label">Analyzing musical features & tempo</span>
+                </div>
+                <div id="stage-chord" class="milestone-row pending">
+                    <span class="milestone-status-icon">○</span>
+                    <span class="milestone-label">Detecting chords & musical key</span>
+                </div>
+                <div id="stage-piano" class="milestone-row pending">
+                    <span class="milestone-status-icon">○</span>
+                    <span class="milestone-label">Building piano voicings & fingering</span>
+                </div>
+                <div id="stage-workspace" class="milestone-row pending">
+                    <span class="milestone-status-icon">○</span>
+                    <span class="milestone-label">Preparing interactive music stand</span>
+                </div>
+            </div>
+
+            <!-- Error State Box -->
+            <div id="prog-error-box" class="processing-error-panel hidden">
+                <div class="error-panel-title">Analysis Issue Encountered</div>
+                <div id="prog-error-detail" class="error-panel-detail"></div>
+                <div class="error-panel-actions">
+                    <button class="err-btn err-btn-primary" onclick="retryLastFile()">Retry Analysis</button>
+                    <button class="err-btn err-btn-secondary" onclick="resetApp()">Choose Another File</button>
+                </div>
+            </div>
+
         </div>
-        <div id="prog-msg" style="font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:8px;">Uploading audio file...</div>
-        <div id="prog-error-box" class="hidden" style="margin-top:16px; padding:12px 14px; background:rgba(229, 72, 77, 0.12); border:1px solid #E5484D; border-radius:8px; text-align:left;">
-            <div style="color:#E5484D; font-weight:700; font-size:13px; margin-bottom:4px;">Analysis Error</div>
-            <div id="prog-error-detail" style="color:var(--text); font-size:12px; word-break:break-word;"></div>
-            <button onclick="resetApp()" style="margin-top:10px; padding:6px 14px; background:var(--blue); color:white; border:none; border-radius:6px; font-weight:600; font-size:12px; cursor:pointer;">Choose Another File</button>
-        </div>
-    </div>
+    </main>
 </div>
 
 <!-- ╔══════════════════════════════════════════════════════════════╗
-     ║  PERMANENT SINGLE WORKSPACE (Interactive Music Stand)        ║
+     ║  3. PERMANENT SINGLE WORKSPACE (Interactive Music Stand)     ║
      ║  Hierarchy:                                                  ║
      ║  1. HEADER (Logo + Metadata + Mode Selector + Controls)     ║
      ║  2. CENTRAL CHORD LEARNING (Left Hand | 3 Chords | Right)    ║
@@ -81,7 +131,8 @@
 
     <!-- 1. HEADER ROW -->
     <header class="ws-header">
-        <div class="ws-logo" onclick="resetApp()" title="New Song">Hot<span>Chords</span> <span class="ws-version">v0.2</span></div>
+        <div class="ws-logo" onclick="resetApp()" title="New Song">Hot<span>Chords</span> <span class="ws-version">VER 0.3</span></div>
+
 
         <div class="ws-meta">
             <div class="ws-meta-item"><span class="ws-meta-label">Key</span><span class="ws-meta-val" id="val-key">—</span></div>
@@ -121,16 +172,23 @@
 
         <!-- Center: 3-Chord Reel (Prev < Current Hero > Next) -->
         <section class="ws-chord-center">
+            
+            <!-- Fixed Stationary Column Labels Header Row -->
+            <div class="ws-fixed-labels-row" aria-hidden="true">
+                <div class="ws-fixed-label ws-fixed-label--prev">PREVIOUS</div>
+                <div class="ws-fixed-label ws-fixed-label--current">CURRENT CHORD</div>
+                <div class="ws-fixed-label ws-fixed-label--next">NEXT</div>
+            </div>
+
+            <!-- 3-Chord Viewport & Physical Track -->
             <div id="chord-viewport" class="ws-chord-viewport">
                 <div id="chord-track" class="ws-chord-track">
 
                     <div id="chord-prev" class="chord-card chord-card--prev" title="Click to go back">
-                        <div class="chord-card-label">Previous</div>
                         <div class="chord-card-name" data-chord-name>—</div>
                     </div>
 
                     <div id="chord-current" class="chord-card chord-card--current" aria-live="polite" aria-atomic="true">
-                        <div class="chord-card-label">Current Chord</div>
                         <div class="chord-card-name chord-card-name--hero" data-chord-name>—</div>
                         <div class="chord-card-voicing" data-chord-voicing></div>
                         <div class="chord-progress-track" aria-hidden="true">
@@ -139,13 +197,13 @@
                     </div>
 
                     <div id="chord-next" class="chord-card chord-card--next" title="Click to skip ahead">
-                        <div class="chord-card-label">Next</div>
                         <div class="chord-card-name" data-chord-name>—</div>
                     </div>
 
                 </div>
             </div>
         </section>
+
 
         <!-- Right Hand Column (Harmony) -->
         <aside id="ws-hand-right" class="ws-hand-col ws-hand-col--right" aria-label="Right hand harmony guidance">
@@ -279,14 +337,31 @@ function showScreen(id) {
     if (ws) ws.classList.toggle('hidden', id !== 'workspace');
 }
 
-// ─── Analysis error ───────────────────────────────────────────────────────────
-function showAnalysisError(detail) {
-    if (analysisPollInterval) { clearInterval(analysisPollInterval); analysisPollInterval = null; }
-    document.getElementById('prog-bar-container')?.classList.add('hidden');
-    document.getElementById('prog-msg')?.classList.add('hidden');
-    document.getElementById('prog-error-box')?.classList.remove('hidden');
-    const det = document.getElementById('prog-error-detail');
-    if (det) det.textContent = detail || 'An unexpected error occurred during audio processing.';
+// ─── Pipeline Stage Updater ───────────────────────────────────────────────────
+function _updatePipelineStageUI(pct, msg) {
+    const milestones = [
+        { id: 'stage-prep',      min: 0,  max: 30 },
+        { id: 'stage-feat',      min: 30, max: 65 },
+        { id: 'stage-chord',     min: 65, max: 85 },
+        { id: 'stage-piano',     min: 85, max: 98 },
+        { id: 'stage-workspace', min: 98, max: 100 }
+    ];
+
+    milestones.forEach(st => {
+        const el = document.getElementById(st.id);
+        if (!el) return;
+        const iconEl = el.querySelector('.milestone-status-icon');
+        if (pct >= st.max) {
+            el.className = 'milestone-row done';
+            if (iconEl) iconEl.textContent = '✓';
+        } else if (pct >= st.min) {
+            el.className = 'milestone-row active';
+            if (iconEl) iconEl.textContent = '●';
+        } else {
+            el.className = 'milestone-row pending';
+            if (iconEl) iconEl.textContent = '○';
+        }
+    });
 }
 
 // ─── Reset / New Song ─────────────────────────────────────────────────────────
@@ -307,7 +382,8 @@ function resetApp() {
     DATA = null; currentFile = null;
     activeMode = 'simplified';
 
-    document.getElementById('file-input').value = '';
+    const fileInput = document.getElementById('file-input');
+    if (fileInput) fileInput.value = '';
 
     document.querySelectorAll('.mode-btn').forEach(btn => {
         const isSimp = (btn.dataset.mode === 'simplified' || btn.dataset.mode === 'simple');
@@ -315,7 +391,26 @@ function resetApp() {
         btn.setAttribute('aria-selected', isSimp);
     });
 
+    _updatePipelineStageUI(0, 'Waiting...');
     showScreen('upload-screen');
+}
+
+// ─── Analysis error ───────────────────────────────────────────────────────────
+function showAnalysisError(detail) {
+    if (analysisPollInterval) { clearInterval(analysisPollInterval); analysisPollInterval = null; }
+    document.getElementById('prog-bar-container')?.classList.add('hidden');
+    document.getElementById('prog-msg')?.classList.add('hidden');
+    document.getElementById('prog-error-box')?.classList.remove('hidden');
+    const det = document.getElementById('prog-error-detail');
+    if (det) det.textContent = detail || 'An unexpected error occurred during audio processing.';
+}
+
+function retryLastFile() {
+    if (currentFile) {
+        handleFile(currentFile);
+    } else {
+        resetApp();
+    }
 }
 
 // ─── File handling ────────────────────────────────────────────────────────────
@@ -326,10 +421,12 @@ function handleFile(file) {
 
     document.getElementById('prog-file-name').textContent = file.name;
     document.getElementById('prog-bar').style.width = '5%';
-    document.getElementById('prog-msg').textContent = 'Uploading audio file...';
+    document.getElementById('prog-msg').textContent = 'Preparing audio...';
     document.getElementById('prog-bar-container')?.classList.remove('hidden');
     document.getElementById('prog-msg')?.classList.remove('hidden');
     document.getElementById('prog-error-box')?.classList.add('hidden');
+
+    _updatePipelineStageUI(5, 'Preparing audio...');
 
     showScreen('analysis-screen');
 
@@ -342,8 +439,10 @@ function handleFile(file) {
             .then(r => r.json())
             .then(p => {
                 consecutiveFailures = 0;
+                const pct = p.pct !== undefined ? p.pct : 5;
                 if (p.pct !== undefined) document.getElementById('prog-bar').style.width = Math.max(5, p.pct) + '%';
                 if (p.msg) document.getElementById('prog-msg').textContent = p.msg;
+                _updatePipelineStageUI(pct, p.msg || '');
             })
             .catch(() => { if (++consecutiveFailures > 10) showAnalysisError('Connection to backend server lost.'); });
 
@@ -355,6 +454,7 @@ function handleFile(file) {
                 if (res.ready === true) {
                     if (analysisPollInterval) { clearInterval(analysisPollInterval); analysisPollInterval = null; }
                     DATA = res;
+                    _updatePipelineStageUI(100, 'Done!');
                     initResults(res);
                 }
             })
@@ -362,12 +462,13 @@ function handleFile(file) {
     };
 
     if (analysisPollInterval) clearInterval(analysisPollInterval);
-    analysisPollInterval = setInterval(poll, 800);
+    analysisPollInterval = setInterval(poll, 600);
 
     fetch('/analyze', { method: 'POST', body: fd })
         .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(`Server ${r.status}: ${t}`); }); return r.json(); })
         .catch(err => showAnalysisError(`Upload failed: ${err.message}`));
 }
+
 
 // ─── initResults — called once after successful analysis ──────────────────────
 async function initResults(data) {
