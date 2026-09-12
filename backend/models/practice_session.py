@@ -10,8 +10,10 @@ Principles:
 4. Explains hold/change intervals, current/next chord preparations, and loop wrapping without ML or duplicate timers.
 """
 
+from __future__ import annotations
+
 from enum import Enum
-from typing import List, Dict, Optional, Any, Tuple
+from typing import List, Dict, Optional, Any, Tuple, TYPE_CHECKING
 from pydantic import BaseModel, Field, ConfigDict
 import numpy as np
 
@@ -28,12 +30,12 @@ from backend.theory.simplification import (
 from backend.theory.transposition import (
     transpose_chord_symbol,
 )
-from backend.theory.beginner_practice import (
-    BeginnerPracticePlan,
-    PracticeSection,
-    classify_difficulty_category,
-    explain_chord_difficulty,
-)
+
+if TYPE_CHECKING:
+    from backend.theory.beginner_practice import (
+        BeginnerPracticePlan,
+        PracticeSection,
+    )
 
 
 class PracticeStatus(str, Enum):
@@ -197,6 +199,8 @@ def create_practice_session(
     """
     Initializes a PracticeSession instance from song data and practice plan.
     """
+    from backend.theory.beginner_practice import BeginnerPracticePlan
+
     safe_original_bpm = max(30.0, float(tempo))
     
     plan_obj: Optional[BeginnerPracticePlan] = None
@@ -359,6 +363,8 @@ def update_practice_session_time(
     time_until_next = round(max(0.0, c_end - effective_time), 3)
 
     # Voicings & guidance
+    from backend.theory.beginner_practice import classify_difficulty_category
+
     cur_voicing = voice_chord(cur_chord_name) if cur_chord_name != "N" else None
     next_voicing = voice_chord(next_chord_name) if (next_chord_name and next_chord_name != "N") else None
     
