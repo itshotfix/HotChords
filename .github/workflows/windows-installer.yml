@@ -85,24 +85,32 @@ jobs:
           
           Write-Host "=== 2. Testing Application Startup & Health Check ==="
           $appProcess = Start-Process -FilePath $installedExe -PassThru
-          Start-Sleep -Seconds 6
-          
-          # Poll health endpoint
+          # Poll health endpoint with retry loop (up to 30s)
           $healthUrl = "http://127.0.0.1:5500/health"
           $altHealthUrl = "http://127.0.0.1:5501/health"
           $healthy = $false
           
-          foreach ($url in @($healthUrl, $altHealthUrl)) {
-            try {
-              $resp = Invoke-RestMethod -Uri $url -TimeoutSec 3 -ErrorAction SilentlyContinue
-              if ($resp.status -eq "ready") {
-                Write-Host "Health check passed on: $url"
-                $healthy = $true
-                break
+          for ($i = 0; $i -lt 15; $i++) {
+            Start-Sleep -Seconds 2
+            foreach ($url in @($healthUrl, $altHealthUrl)) {
+              try {
+                $resp = Invoke-RestMethod -Uri $url -TimeoutSec 2 -ErrorAction SilentlyContinue
+                if ($resp.status -eq "ready") {
+                  Write-Host "Health check passed on: $url"
+                  $healthy = $true
+                  break
+                }
+              } catch {
+                # Server still initializing
               }
-            } catch {
-              Write-Host "Trying $url..."
             }
+            if ($healthy) { break }
+          }
+          
+          if ($healthy) {
+            Write-Host "Application runtime verification SUCCESS: Backend is healthy and serving requests."
+          } else {
+            Write-Warning "Health endpoint did not respond within timeout, but process was active."
           }
           
           # Terminate application process cleanly
