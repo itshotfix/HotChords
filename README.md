@@ -2,9 +2,35 @@
 
 Turn songs into playable piano chords with local audio analysis.
 
-[Download HotChords v0.4.0](https://github.com/itshotfix/HotChords/releases/download/v0.4.0/HotChords-v0.4.0-macOS-AppleSilicon.dmg) (macOS Apple Silicon)
+## Download
 
-Download the installer, move HotChords to Applications, and start playing.
+### Windows
+
+[Download HotChords v0.4.0 for Windows](https://github.com/itshotfix/HotChords/releases/download/v0.4.0/HotChords-v0.4.0-Windows-x64-Setup.exe)
+
+Windows 10 and Windows 11, x64.
+
+Installation:
+
+1. Download the installer.
+2. Double-click the installer.
+3. Complete installation.
+4. HotChords will launch automatically in your browser.
+
+### macOS
+
+[Download HotChords v0.4.0 for macOS](https://github.com/itshotfix/HotChords/releases/download/v0.4.0/HotChords-v0.4.0-macOS-AppleSilicon.dmg)
+
+Apple Silicon.
+
+Installation:
+
+1. Download the DMG.
+2. Open it.
+3. Drag HotChords to Applications.
+4. Launch HotChords.
+
+No Python, Git, Node.js, or terminal setup is required for the packaged applications.
 
 ## What it does
 
@@ -31,31 +57,20 @@ HotChords analyzes an audio file and turns its harmonic content into playable pi
 ### Practice Mode
 ![Practice Mode](docs/images/05-practice-mode.png)
 
-## Installation
-
-### macOS Apple Silicon
-
-Download:
-
-[HotChords v0.4.0](https://github.com/itshotfix/HotChords/releases/download/v0.4.0/HotChords-v0.4.0-macOS-AppleSilicon.dmg)
-
-1. Open the downloaded DMG.
-2. Drag HotChords to Applications.
-3. Open HotChords.
-
-No Python, Git, Node.js, or terminal setup is required for the packaged application.
-
 ## Current Release
 
 Version: 0.4.0
 
-Platform: macOS Apple Silicon
+### Windows Installer
+- Filename: HotChords-v0.4.0-Windows-x64-Setup.exe
+- Platform: Windows 10 & 11 (x64)
+- Direct Download: [HotChords v0.4.0 for Windows](https://github.com/itshotfix/HotChords/releases/download/v0.4.0/HotChords-v0.4.0-Windows-x64-Setup.exe)
 
-Installer: HotChords-v0.4.0-macOS-AppleSilicon.dmg
-
-SHA-256:
-
-`49d8008569c1b88b027149eeb4c5a4fc8804f650a55a2cf4adf338d6d843404f`
+### macOS Installer
+- Filename: HotChords-v0.4.0-macOS-AppleSilicon.dmg
+- Platform: macOS Apple Silicon
+- Direct Download: [HotChords v0.4.0 for macOS](https://github.com/itshotfix/HotChords/releases/download/v0.4.0/HotChords-v0.4.0-macOS-AppleSilicon.dmg)
+- SHA-256: `49d8008569c1b88b027149eeb4c5a4fc8804f650a55a2cf4adf338d6d843404f`
 
 Full release:
 

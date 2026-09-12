@@ -18,6 +18,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Dual-Source Audio Architecture:** Full mutual exclusivity between polyphonic Salamander Grand Piano synthesizer and original track audio playback with OS-level pitch preservation.
 - **Real-Time Microphone Practice Mode:** Low-latency client-side YIN autocorrelation pitch detection with note tolerance ($150\text{ms}$ window) and practice metrics tracking.
 - **Comprehensive Automated Test Suite:** 195 Python backend tests and 55 Node client test suites covering MIR DSP, source separation, playback lifecycle, and practice calibration.
+- **Standalone Windows x64 Installer:** Packaged standalone installer (`HotChords-v0.4.0-Windows-x64-Setup.exe`) for Windows 10 & 11 (x64) with bundled FFmpeg and automated browser launch.
+- **Standalone macOS Apple Silicon Installer:** Packaged DMG distribution (`HotChords-v0.4.0-macOS-AppleSilicon.dmg`) for Apple Silicon Macs.
 
 ### Changed
 - Refactored `SongAudioController` to preserve Object URL lifetimes and enforce explicit volume/unmuted states during track switching.

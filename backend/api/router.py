@@ -146,7 +146,19 @@ def analyze_upload(background_tasks: BackgroundTasks, file: UploadFile = File(..
 #  STATIC FILES MOUNTING
 # ══════════════════════════════════════════════════════════════
 # Mount static assets (CSS, JS)
-frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend"))
+def _get_frontend_dir() -> str:
+    import sys
+    if getattr(sys, "frozen", False):
+        if hasattr(sys, "_MEIPASS"):
+            bundle_dir = os.path.join(sys._MEIPASS, "frontend")
+            if os.path.isdir(bundle_dir):
+                return os.path.abspath(bundle_dir)
+        exe_dir = os.path.join(os.path.dirname(sys.executable), "frontend")
+        if os.path.isdir(exe_dir):
+            return os.path.abspath(exe_dir)
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend"))
+
+frontend_dir = _get_frontend_dir()
 
 app.mount("/css", StaticFiles(directory=os.path.join(frontend_dir, "css")), name="css")
 app.mount("/js", StaticFiles(directory=os.path.join(frontend_dir, "js")), name="js")
