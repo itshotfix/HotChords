@@ -201,11 +201,11 @@ def print_report():
     
     for name, ok, msg in results:
         if ok is True:
-            icon = "  ✓"
+            icon = "  [OK]"
         elif ok is False:
-            icon = "  ✗"
+            icon = "  [FAIL]"
         else:
-            icon = "  ~"
+            icon = "  [INFO]"
         
         # For multiline messages, indent continuation lines
         lines = msg.split("\n")

@@ -12,7 +12,10 @@ Evaluates:
 import time
 import os
 import gc
-import resource
+try:
+    import resource
+except ImportError:
+    resource = None
 import tempfile
 import numpy as np
 import soundfile as sf
@@ -68,9 +71,12 @@ def benchmark_duration_scaling(durations: List[float] = None) -> List[Dict[str, 
 
     for dur in durations:
         gc.collect()
-        # On Darwin, ru_maxrss is in bytes; on Linux, in KB.
-        rusage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        mem_before = rusage / (1024 * 1024) if rusage > 10000000 else rusage / 1024
+        if resource is not None:
+            # On Darwin, ru_maxrss is in bytes; on Linux, in KB.
+            rusage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            mem_before = rusage / (1024 * 1024) if rusage > 10000000 else rusage / 1024
+        else:
+            mem_before = 0.0
         wav_path = generate_benchmark_wav(dur)
 
         try:
@@ -119,8 +125,11 @@ def benchmark_duration_scaling(durations: List[float] = None) -> List[Dict[str, 
             t_loop = time.perf_counter() - t0
 
             total_time = t_prof + t_timing + t_chord + t_struct + t_loop
-            rusage_after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            mem_after = rusage_after / (1024 * 1024) if rusage_after > 10000000 else rusage_after / 1024
+            if resource is not None:
+                rusage_after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                mem_after = rusage_after / (1024 * 1024) if rusage_after > 10000000 else rusage_after / 1024
+            else:
+                mem_after = 0.0
             peak_ram_mb = round(mem_after, 2)
 
             results.append({

@@ -32,14 +32,17 @@ from backend.theory.practice_metrics import (
 
 def get_current_process_memory_mb() -> float:
     """Get current process memory in MB using standard library resource."""
-    import resource
-    import sys
-    usage = resource.getrusage(resource.RUSAGE_SELF)
-    # On macOS ru_maxrss is in bytes, on Linux in kilobytes
-    if sys.platform == "darwin":
-        return usage.ru_maxrss / (1024.0 * 1024.0)
-    else:
-        return usage.ru_maxrss / 1024.0
+    try:
+        import resource
+        import sys
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        # On macOS ru_maxrss is in bytes, on Linux in kilobytes
+        if sys.platform == "darwin":
+            return usage.ru_maxrss / (1024.0 * 1024.0)
+        else:
+            return usage.ru_maxrss / 1024.0
+    except (ImportError, Exception):
+        return 0.0
 
 
 def run_phase12_benchmarks() -> Dict[str, Any]:

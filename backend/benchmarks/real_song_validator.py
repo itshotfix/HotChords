@@ -11,7 +11,10 @@ import sys
 import time
 import json
 import ctypes
-import resource
+try:
+    import resource
+except ImportError:
+    resource = None
 from typing import Dict, List, Any, Optional
 
 from backend.analysis.pipeline import analyze_song
@@ -50,8 +53,13 @@ def get_current_rss_mb() -> float:
         except Exception:
             pass
 
-    rusage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    return round(rusage / (1024 * 1024) if rusage > 10000000 else rusage / 1024, 2)
+    if resource is not None:
+        try:
+            rusage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            return round(rusage / (1024 * 1024) if rusage > 10000000 else rusage / 1024, 2)
+        except Exception:
+            pass
+    return 0.0
 
 
 

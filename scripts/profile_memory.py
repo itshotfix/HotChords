@@ -21,7 +21,10 @@ import gc
 import time
 import json
 import ctypes
-import resource
+try:
+    import resource
+except ImportError:
+    resource = None
 import tempfile
 import multiprocessing as mp
 import numpy as np
@@ -59,8 +62,13 @@ def get_current_rss_mb() -> float:
             pass
 
     # Fallback to getrusage
-    rusage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    return round(rusage / (1024 * 1024) if rusage > 10000000 else rusage / 1024, 2)
+    if resource is not None:
+        try:
+            rusage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            return round(rusage / (1024 * 1024) if rusage > 10000000 else rusage / 1024, 2)
+        except Exception:
+            pass
+    return 0.0
 
 
 def run_stage_profile_worker(duration_sec: float, return_dict: dict):
