@@ -15,6 +15,8 @@ Pipeline Stages:
 5. Timeline Generation: Produces new beginner ChordEvents without mutating original chords.
 """
 
+from __future__ import annotations
+
 from typing import List, Dict, Optional, Union, Any, Tuple, TYPE_CHECKING
 from backend.theory.constants import NOTE_NAMES, NOTE_FLAT
 from backend.theory.theory import (

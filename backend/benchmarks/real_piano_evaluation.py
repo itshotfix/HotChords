@@ -12,6 +12,7 @@ Key Principles:
 3. Multi-Dimensional Breakdown: Register, Chord Size, Velocity, Pedal, Mic Distance, Room Acoustic.
 4. Local-First & In-Memory: Evaluates audio streams in memory without network/cloud calls.
 """
+from __future__ import annotations
 
 import os
 import json
@@ -143,6 +144,16 @@ class ChordLevelMetrics(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class NoteMetricsSummary(BaseModel):
+    """Lightweight note summary for category breakdowns."""
+    precision: float = 0.0
+    recall: float = 0.0
+    f1_score: float = Field(default=0.0, alias="f1Score")
+    total_notes_evaluated: int = Field(default=0, alias="totalNotesEvaluated")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class RealPianoEvaluationResult(BaseModel):
     """Comprehensive evaluation result for a dataset or track."""
     evaluation_id: str = Field(..., alias="evaluationId")
@@ -159,16 +170,6 @@ class RealPianoEvaluationResult(BaseModel):
     breakdown_by_mic_position: Dict[str, NoteMetricsSummary] = Field(default_factory=dict, alias="breakdownByMicPosition")
     breakdown_by_room_condition: Dict[str, NoteMetricsSummary] = Field(default_factory=dict, alias="breakdownByRoomCondition")
     latency_summary: Dict[str, float] = Field(default_factory=dict, alias="latencySummary")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class NoteMetricsSummary(BaseModel):
-    """Lightweight note summary for category breakdowns."""
-    precision: float = 0.0
-    recall: float = 0.0
-    f1_score: float = Field(default=0.0, alias="f1Score")
-    total_notes_evaluated: int = Field(default=0, alias="totalNotesEvaluated")
 
     model_config = ConfigDict(populate_by_name=True)
 
