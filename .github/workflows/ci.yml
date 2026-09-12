@@ -20,16 +20,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install core dependencies (without heavy ML packages)
-        # Install only what's needed for import checks and linting.
-        # Demucs/PyTorch are excluded here because they require large model
-        # downloads and GPU resources that are not appropriate for CI.
+      - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install librosa numpy scipy fastapi uvicorn pydantic python-multipart
-
-      - name: Install test dependencies
-        run: |
+          pip install -r requirements.txt
           pip install pytest
 
       - name: Set up Node.js
