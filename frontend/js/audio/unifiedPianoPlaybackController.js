@@ -47,6 +47,7 @@
             this._isPaused = false;
             this._pauseOffset = 0;
             this._clockUnsub = null;
+            this.enabled = true;
 
             this.stateListeners = [];
             this.modeListeners = [];
@@ -112,6 +113,14 @@
             this._clockUnsub = clock.subscribe((snap) => {
                 if (!this.timeline) return;
 
+                if (!this.enabled) {
+                    if (this._isPlaying) {
+                        this._silenceAll();
+                        this._isPlaying = false;
+                    }
+                    return;
+                }
+
                 const rateChanged = snap.playbackRate !== prevRate;
                 const stateChanged = snap.state !== prevState;
                 const timeJump = Math.abs(snap.currentTime - prevTime) > 0.1;
@@ -142,12 +151,31 @@
         }
 
         /**
+         * Enables or disables audio output for this controller.
+         * @param {boolean} enabled
+         */
+        setEnabled(enabled) {
+            const isEn = Boolean(enabled);
+            if (this.enabled === isEn) return;
+            this.enabled = isEn;
+            if (!this.enabled) {
+                this.stop();
+            } else if (this.clock && this.clock.state === 'PLAYING' && this.timeline) {
+                this.play(this.currentMode, this.clock.currentTime, this.clock.playbackRate);
+            }
+        }
+
+        /**
          * Starts playback in the specified mode from the given offset with optional rate scaling.
          * @param {string} mode - PianoPlaybackMode.ORIGINAL_CHORDS or PianoPlaybackMode.BEGINNER_CHORDS
          * @param {number} startOffset - Offset in seconds (default: 0 or current pause offset)
          * @param {number} playbackRate - Playback rate multiplier (default: 1.0)
          */
         async play(mode = null, startOffset = null, playbackRate = null) {
+            if (!this.enabled) {
+                this._silenceAll();
+                return false;
+            }
             if (!this.timeline) {
                 console.warn('[UnifiedPianoPlaybackController] Cannot play: No SongTimeline loaded.');
                 return false;

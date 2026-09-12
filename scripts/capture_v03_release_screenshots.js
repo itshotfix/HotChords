@@ -17,9 +17,9 @@ const puppeteer = require('puppeteer-core');
 const fs = require('fs');
 const path = require('path');
 
-const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const DOCS_SCREENSHOT_DIR = '/Volumes/TIKDI/APP Development/HotChords App/docs/screenshots/v0.3';
-const TEST_SONG_PATH = '/Volumes/TIKDI/APP Development/HotChords App/test songs/Song1-HotFix-TuMera.mp3';
+const CHROME_PATH = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const DOCS_SCREENSHOT_DIR = path.join(__dirname, '../docs/screenshots/v0.3');
+const TEST_SONG_PATH = path.join(__dirname, '../test songs/Song1-HotFix-TuMera.mp3');
 
 if (!fs.existsSync(DOCS_SCREENSHOT_DIR)) {
     fs.mkdirSync(DOCS_SCREENSHOT_DIR, { recursive: true });

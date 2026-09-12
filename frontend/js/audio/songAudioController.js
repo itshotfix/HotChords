@@ -1,18 +1,18 @@
 /**
  * songAudioController.js
- * 
+ *
  * Song Audio Controller for HotChords.
  * Bridges uploaded/local song audio tracks with the central PlaybackClock.
- * 
+ *
  * Architecture:
  * PlaybackClock -> SongAudioController -> HTMLAudioElement (preservesPitch = true) -> Audio Output
- * 
+ *
  * Responsibilities:
  * - Loads offline local audio files (URLs or File / Blob objects).
  * - Enforces hardware/OS-level pitch preservation (preservesPitch / webkitPreservesPitch).
  * - Synchronizes with PlaybackClock lifecycle (play, pause, stop, seek, rate change).
- * - Leaves continuous playback to browser media engine without clock fighting.
- * - Handles end-of-song and error states cleanly.
+ * - Avoids clock fighting: reconciles drift smoothly without continuous per-frame seeks.
+ * - Handles play() promises, error states, and end-of-track cleanly.
  */
 
 (function(global) {
@@ -33,8 +33,11 @@
             this.error = null;
             this.objectUrl = null;
             this.duration = 0;
+            this.enabled = false;
 
             this._isSeeking = false;
+            this._isPlayingMedia = false;
+            this._lastResyncTime = 0;
             this._clockUnsub = null;
             this.stateListeners = new Set();
 
@@ -48,12 +51,20 @@
         _initAudioElement() {
             if (!this.audioEl) return;
 
+            this.audioEl.volume = 1.0;
+            this.audioEl.muted = false;
+
             // Enforce pitch preservation across Chromium / WebKit (macOS WKWebView)
             this._enforcePitchPreservation();
 
             this.audioEl.addEventListener('loadedmetadata', () => {
                 this.duration = this.audioEl.duration || 0;
-                if (this.clock) {
+                if (this.state === AudioLoadState.LOADING) {
+                    this.state = AudioLoadState.READY;
+                    this.error = null;
+                    this._notifyState();
+                }
+                if (this.clock && (!this.clock.duration || this.clock.duration === 0)) {
                     this.clock.setDuration(this.duration);
                 }
             });
@@ -66,15 +77,35 @@
                 }
             });
 
+            this.audioEl.addEventListener('play', () => {
+                this._isPlayingMedia = true;
+            });
+
+            this.audioEl.addEventListener('playing', () => {
+                this._isPlayingMedia = true;
+            });
+
+            this.audioEl.addEventListener('pause', () => {
+                this._isPlayingMedia = false;
+            });
+
             this.audioEl.addEventListener('ended', () => {
-                if (this.clock && this.clock.state === 'PLAYING') {
-                    this.clock.stop();
+                this._isPlayingMedia = false;
+                if (this.clock) {
+                    if (this.clock.isLooping()) {
+                        // Let loop boundary control transition
+                        const region = this.clock.getLoopRegion();
+                        this.clock.seek(region.start || 0);
+                    } else if (this.clock.state === 'PLAYING') {
+                        this.clock.stop();
+                    }
                 }
             });
 
-            this.audioEl.addEventListener('error', (e) => {
+            this.audioEl.addEventListener('error', () => {
+                this._isPlayingMedia = false;
                 const err = this.audioEl.error;
-                const msg = err ? `Audio Error code ${err.code}: ${err.message || 'Failed to decode'}` : 'Audio load error';
+                const msg = err ? `Audio Error code ${err.code}: ${err.message || 'Failed to decode audio file'}` : 'Audio load error';
                 console.error('[SongAudioController]', msg);
                 this.state = AudioLoadState.ERROR;
                 this.error = msg;
@@ -84,17 +115,20 @@
 
         _enforcePitchPreservation() {
             if (!this.audioEl) return;
-            // Standard W3C & Chromium
             if ('preservesPitch' in this.audioEl) {
                 this.audioEl.preservesPitch = true;
             }
-            // WebKit / Apple WKWebView (macOS / iOS)
             if ('webkitPreservesPitch' in this.audioEl) {
                 this.audioEl.webkitPreservesPitch = true;
             }
-            // Gecko / Firefox
             if ('mozPreservesPitch' in this.audioEl) {
                 this.audioEl.mozPreservesPitch = true;
+            }
+            if (this.audioEl.volume !== undefined && this.audioEl.volume !== 1.0) {
+                this.audioEl.volume = 1.0;
+            }
+            if (this.audioEl.muted) {
+                this.audioEl.muted = false;
             }
         }
 
@@ -110,7 +144,9 @@
                 return false;
             }
 
-            this._cleanupObjectUrl();
+            if (this.objectUrl && this.objectUrl !== url) {
+                this._cleanupObjectUrl();
+            }
             this.state = AudioLoadState.LOADING;
             this.error = null;
             this._notifyState();
@@ -129,6 +165,7 @@
                 this._enforcePitchPreservation();
 
                 if (this.audioEl.readyState >= 2) {
+                    this.duration = this.audioEl.duration || 0;
                     this.state = AudioLoadState.READY;
                     this._notifyState();
                     resolve(true);
@@ -145,6 +182,7 @@
 
                 const onCanPlay = () => {
                     cleanup();
+                    this.duration = this.audioEl.duration || 0;
                     this.state = AudioLoadState.READY;
                     this._notifyState();
                     resolve(true);
@@ -152,6 +190,7 @@
 
                 const onLoadedMetadata = () => {
                     cleanup();
+                    this.duration = this.audioEl.duration || 0;
                     this.state = AudioLoadState.READY;
                     this._notifyState();
                     resolve(true);
@@ -162,11 +201,17 @@
                     resolve(false);
                 };
 
-                // 2.5s safety timeout to avoid hanging caller
                 timeoutId = setTimeout(() => {
                     cleanup();
-                    resolve(true);
-                }, 2500);
+                    if (this.audioEl.readyState >= 1) {
+                        this.duration = this.audioEl.duration || 0;
+                        this.state = AudioLoadState.READY;
+                        this._notifyState();
+                        resolve(true);
+                    } else {
+                        resolve(false);
+                    }
+                }, 3000);
 
                 this.audioEl.addEventListener('canplay', onCanPlay);
                 this.audioEl.addEventListener('loadedmetadata', onLoadedMetadata);
@@ -188,8 +233,9 @@
 
             this._cleanupObjectUrl();
             if (typeof URL !== 'undefined' && URL.createObjectURL) {
-                this.objectUrl = URL.createObjectURL(file);
-                return await this.load(this.objectUrl);
+                const newUrl = URL.createObjectURL(file);
+                this.objectUrl = newUrl;
+                return await this.load(newUrl);
             }
             return false;
         }
@@ -214,6 +260,17 @@
             this._clockUnsub = clock.subscribe((snap) => {
                 if (!this.audioEl || this.state !== AudioLoadState.READY) return;
 
+                // When disabled, keep audio element paused and silent
+                if (!this.enabled) {
+                    if (!this.audioEl.paused) {
+                        this.audioEl.pause();
+                    }
+                    prevState = snap.state;
+                    prevRate = snap.playbackRate;
+                    prevTime = snap.currentTime;
+                    return;
+                }
+
                 // 1. Playback Rate Synchronization & Pitch Preservation
                 if (snap.playbackRate !== prevRate) {
                     this._enforcePitchPreservation();
@@ -224,32 +281,38 @@
                 // 2. Playback State Synchronization
                 if (snap.state !== prevState) {
                     if (snap.state === 'PLAYING') {
-                        // Align position before starting
                         const diff = Math.abs(this.audioEl.currentTime - snap.currentTime);
-                        if (diff > 0.05) {
+                        if (diff > 0.08) {
                             this.audioEl.currentTime = snap.currentTime;
                         }
                         this._enforcePitchPreservation();
+                        this.audioEl.playbackRate = snap.playbackRate;
                         this.audioEl.play().catch(e => {
-                            console.warn('[SongAudioController] Audio play interrupted:', e);
+                            console.warn('[SongAudioController] Play interrupted:', e);
                         });
                     } else if (snap.state === 'PAUSED') {
                         this.audioEl.pause();
                         this.audioEl.currentTime = snap.currentTime;
                     } else if (snap.state === 'STOPPED') {
                         this.audioEl.pause();
-                        this.audioEl.currentTime = 0;
+                        this.audioEl.currentTime = snap.currentTime;
                     }
                     prevState = snap.state;
                 } else if (snap.state === 'PLAYING') {
-                    // Check for seek/jump in clock while playing
-                    const expectedElapsed = snap.currentTime - prevTime;
-                    const audioElapsed = this.audioEl.currentTime - prevTime;
+                    // 3. Smooth Reconciliation during continuous playback
+                    // Avoid per-frame seeks: only reconcile if large seek jump occurs (> 350ms)
+                    const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
                     const drift = Math.abs(this.audioEl.currentTime - snap.currentTime);
-                    
-                    // Only resync if significant seek jump occurred (> 150ms) to avoid fighting browser audio buffer
-                    if (drift > 0.15) {
+                    const timeSinceResync = now - this._lastResyncTime;
+
+                    if (drift > 0.35 && timeSinceResync > 500) {
+                        this._lastResyncTime = now;
                         this.audioEl.currentTime = snap.currentTime;
+                    }
+
+                    // If clock is playing but audio got paused unexpectedly (and not seeking)
+                    if (this.audioEl.paused && !this.audioEl.ended && this.enabled) {
+                        this.audioEl.play().catch(() => {});
                     }
                 }
                 prevTime = snap.currentTime;
@@ -257,17 +320,53 @@
         }
 
         /**
+         * Enables or disables audio output for this controller.
+         * @param {boolean} enabled
+         */
+        setEnabled(enabled) {
+            const isEn = Boolean(enabled);
+            if (this.enabled === isEn) return;
+            this.enabled = isEn;
+
+            if (!this.enabled) {
+                if (this.audioEl && !this.audioEl.paused) {
+                    this.audioEl.pause();
+                }
+            } else if (this.clock && this.clock.state === 'PLAYING' && this.state === AudioLoadState.READY) {
+                if (this.audioEl) {
+                    const diff = Math.abs(this.audioEl.currentTime - this.clock.currentTime);
+                    if (diff > 0.08) {
+                        this.audioEl.currentTime = this.clock.currentTime;
+                    }
+                    this._enforcePitchPreservation();
+                    this.audioEl.playbackRate = this.clock.playbackRate || 1.0;
+                    this.audioEl.play().catch(e => {
+                        console.warn('[SongAudioController] Play enable failed:', e);
+                    });
+                }
+            }
+        }
+
+        /**
          * Direct transport operations
          */
-        play() {
+        async play() {
+            if (!this.enabled) return false;
             if (this.clock) {
                 this.clock.play();
-                return;
+                return true;
             }
             if (this.audioEl && this.state === AudioLoadState.READY) {
                 this._enforcePitchPreservation();
-                this.audioEl.play().catch(() => {});
+                try {
+                    await this.audioEl.play();
+                    return true;
+                } catch (err) {
+                    console.warn('[SongAudioController] Direct play failed:', err);
+                    return false;
+                }
             }
+            return false;
         }
 
         pause() {
@@ -291,13 +390,25 @@
             }
         }
 
-        seek(time) {
+        restart() {
             if (this.clock) {
-                this.clock.seek(time);
+                this.clock.restart();
+                return;
+            }
+            if (this.audioEl) {
+                this.audioEl.pause();
+                this.audioEl.currentTime = 0;
+            }
+        }
+
+        seek(time) {
+            const target = Math.max(0, Number(time) || 0);
+            if (this.clock) {
+                this.clock.seek(target);
                 return;
             }
             if (this.audioEl && this.state === AudioLoadState.READY) {
-                this.audioEl.currentTime = Math.max(0, Math.min(this.duration, time));
+                this.audioEl.currentTime = Math.min(this.duration, target);
             }
         }
 
@@ -326,6 +437,21 @@
 
         getState() {
             return this.state;
+        }
+
+        getDiagnostics() {
+            return {
+                state: this.state,
+                enabled: this.enabled,
+                error: this.error,
+                duration: this.duration,
+                currentTime: this.audioEl ? this.audioEl.currentTime : 0,
+                paused: this.audioEl ? this.audioEl.paused : true,
+                muted: this.audioEl ? this.audioEl.muted : false,
+                readyState: this.audioEl ? this.audioEl.readyState : 0,
+                networkState: this.audioEl ? this.audioEl.networkState : 0,
+                src: this.audioEl ? (this.audioEl.currentSrc || this.audioEl.src) : null
+            };
         }
 
         onStateChange(listener) {

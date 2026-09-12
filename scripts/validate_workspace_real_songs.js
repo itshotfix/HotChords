@@ -14,8 +14,8 @@ const puppeteer = require('puppeteer-core');
 const fs = require('fs');
 const path = require('path');
 
-const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const SCREENSHOT_DIR = '/Users/harishthakur/.gemini/antigravity-ide/brain/653682c9-af91-48b2-a94f-42d2914e3cb8/screenshots';
+const CHROME_PATH = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const SCREENSHOT_DIR = path.join(__dirname, '../docs/screenshots/validation');
 
 if (!fs.existsSync(SCREENSHOT_DIR)) {
     fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });

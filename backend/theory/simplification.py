@@ -15,7 +15,7 @@ Pipeline Stages:
 5. Timeline Generation: Produces new beginner ChordEvents without mutating original chords.
 """
 
-from typing import List, Dict, Optional, Union, Any, Tuple
+from typing import List, Dict, Optional, Union, Any, Tuple, TYPE_CHECKING
 from backend.theory.constants import NOTE_NAMES, NOTE_FLAT
 from backend.theory.theory import (
     musician_friendly_name,
@@ -26,7 +26,9 @@ from backend.theory.theory import (
     chord_roman,
     get_pitch_class
 )
-from backend.models.timeline import ChordEvent, SongTimeline
+
+if TYPE_CHECKING:
+    from backend.models.timeline import ChordEvent, SongTimeline
 
 
 # Stage 2: Comprehensive, deterministic harmonic reduction table
@@ -37,17 +39,22 @@ for _root in NOTE_NAMES + NOTE_FLAT:
     # Major triad reductions
     for _sfx in ['maj7', 'maj9', 'maj11', 'maj13', 'maj', '6', 'add9', '9', '11', '13', '7', 'dom7', '5', '2']:
         REDUCTION_TABLE[f"{_root}{_sfx}"] = _root
+        REDUCTION_TABLE[f"{_root}:{_sfx}"] = _root
     # Minor triad reductions
-    for _sfx in ['m7', 'm9', 'm11', 'm13', 'm6', 'madd9', 'min7', 'min9', 'min']:
+    for _sfx in ['m7', 'm9', 'm11', 'm13', 'm6', 'madd9', 'min7', 'min9', 'min', 'm']:
         REDUCTION_TABLE[f"{_root}{_sfx}"] = f"{_root}m"
+        REDUCTION_TABLE[f"{_root}:{_sfx}"] = f"{_root}m"
     # Suspended preservation
     for _sfx in ['sus2', 'sus4', 'sus']:
         REDUCTION_TABLE[f"{_root}{_sfx}"] = f"{_root}{_sfx}"
+        REDUCTION_TABLE[f"{_root}:{_sfx}"] = f"{_root}{_sfx}"
     # Diminished / Augmented base fallbacks
     for _sfx in ['dim', 'dim7', '°', 'm7b5', 'ø']:
         REDUCTION_TABLE[f"{_root}{_sfx}"] = f"{_root}dim"
+        REDUCTION_TABLE[f"{_root}:{_sfx}"] = f"{_root}dim"
     for _sfx in ['aug', '+', '+5']:
         REDUCTION_TABLE[f"{_root}{_sfx}"] = _root
+        REDUCTION_TABLE[f"{_root}:{_sfx}"] = _root
 
 
 # Stage 3: Categorized sets for beginner difficulty
@@ -89,14 +96,21 @@ def evaluate_beginner_difficulty(chord_name: str) -> str:
 def reduce_chord_harmony(chord_name: str, key: Optional[str] = None, scale: Optional[str] = None) -> str:
     """
     STAGE 1 & 2: Normalizes and harmonically reduces a single chord symbol.
-    - Strips non-essential extensions (Cmaj7 -> C, Am7 -> Am, G7 -> G).
+    - Strips non-essential extensions (Cmaj7 -> C, Am7 -> Am, G7 -> G, Dmin9/F# -> Dm).
     - Resolves diminished chords to their diatonic function relative to key/scale when available.
-    - Deterministic fallback for unknown inputs.
+    - Preserves root and major/minor quality without destroying minor tonality (Am -> Am, not A).
     """
     if not chord_name or chord_name == 'N':
         return 'N'
     
-    name = musician_friendly_name(chord_name.strip())
+    raw = chord_name.strip()
+    slash_bass = None
+    if '/' in raw:
+        parts = raw.split('/', 1)
+        raw = parts[0]
+        slash_bass = parts[1].strip()
+
+    name = musician_friendly_name(raw)
     
     # 1. Lookup in deterministic reduction table
     reduced = REDUCTION_TABLE.get(name)
@@ -142,6 +156,7 @@ def reduce_chord_harmony(chord_name: str, key: Optional[str] = None, scale: Opti
     return musician_friendly_name(reduced)
 
 
+
 def simplify_progression(
     chords: List[Union[ChordEvent, Dict[str, Any]]],
     tempo: Optional[float] = None,
@@ -157,6 +172,7 @@ def simplify_progression(
     - Eliminates short passing chords based on tempo/BPM-aware threshold.
     - Generates new beginner ChordEvents without mutating input events.
     """
+    from backend.models.timeline import ChordEvent
     if not chords:
         return []
 

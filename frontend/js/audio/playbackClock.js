@@ -45,6 +45,11 @@
                 return Date.now();
             });
 
+            // Loop region anchors
+            this._loopStart = 0;
+            this._loopEnd = 0;
+            this._loopEnabled = false;
+
             this._listeners = new Set();
             this._rafId = null;
             this._boundTick = this._tick.bind(this);
@@ -63,6 +68,43 @@
         }
 
         /**
+         * Configures an authoritative loop region on the timeline.
+         * @param {number} startSeconds
+         * @param {number} endSeconds
+         * @param {boolean} enabled
+         */
+        setLoop(startSeconds, endSeconds, enabled = true) {
+            const start = Math.max(0, Number(startSeconds) || 0);
+            const end = Math.max(start, Number(endSeconds) || 0);
+            this._loopStart = start;
+            this._loopEnd = end;
+            this._loopEnabled = !!enabled && (end > start);
+            this._notify();
+        }
+
+        /**
+         * Clears loop region.
+         */
+        clearLoop() {
+            this._loopEnabled = false;
+            this._loopStart = 0;
+            this._loopEnd = 0;
+            this._notify();
+        }
+
+        isLooping() {
+            return this._loopEnabled;
+        }
+
+        getLoopRegion() {
+            return {
+                enabled: this._loopEnabled,
+                start: this._loopStart,
+                end: this._loopEnd
+            };
+        }
+
+        /**
          * Returns the current canonical musical timeline time in seconds.
          */
         getCurrentTime() {
@@ -72,6 +114,11 @@
                 const computed = this._timelinePosition + elapsedSec;
                 
                 if (this.duration > 0 && computed >= this.duration) {
+                    if (this._loopEnabled) {
+                        this._timelinePosition = this._loopStart;
+                        this._wallClockAnchor = nowMs;
+                        return this._loopStart;
+                    }
                     this._timelinePosition = this.duration;
                     this.state = PlaybackState.STOPPED;
                     this._stopTickLoop();
@@ -81,7 +128,6 @@
             }
             return this._timelinePosition;
         }
-
 
         get currentTime() {
             return this.getCurrentTime();
@@ -93,9 +139,9 @@
         play() {
             if (this.state === PlaybackState.PLAYING) return;
 
-            // If at or beyond duration, restart from 0
+            // If at or beyond duration, restart from 0 (or loop start if looping)
             if (this.duration > 0 && this._timelinePosition >= this.duration) {
-                this._timelinePosition = 0;
+                this._timelinePosition = this._loopEnabled ? this._loopStart : 0;
             }
 
             this._wallClockAnchor = this._getTime();
@@ -123,7 +169,7 @@
          * Stops playback and resets position to 0.0 seconds.
          */
         stop() {
-            this._timelinePosition = 0;
+            this._timelinePosition = this._loopEnabled ? this._loopStart : 0;
             this._wallClockAnchor = this._getTime();
             this.state = PlaybackState.STOPPED;
 
@@ -132,11 +178,22 @@
         }
 
         /**
-         * Cancels previous scheduling, resets position to 0, and starts playback from 0.0s.
+         * Canonical restart transport operation:
+         * Resets position to 0.0 (or loop start).
+         * If playing, continues playing from 0.0; if paused/stopped, stays at 0.0.
          */
         restart() {
-            this.stop();
-            this.play();
+            const wasPlaying = (this.state === PlaybackState.PLAYING);
+            this._timelinePosition = this._loopEnabled ? this._loopStart : 0;
+            this._wallClockAnchor = this._getTime();
+            if (wasPlaying) {
+                this.state = PlaybackState.PLAYING;
+                this._startTickLoop();
+            } else {
+                this.state = PlaybackState.PAUSED;
+                this._stopTickLoop();
+            }
+            this._notify();
         }
 
         /**
@@ -154,10 +211,15 @@
             this._timelinePosition = clamped;
             this._wallClockAnchor = this._getTime();
 
-            // If we reached the end while playing, stop
+            // If we reached the end while playing and not looping, stop
             if (this.duration > 0 && clamped >= this.duration && this.state === PlaybackState.PLAYING) {
-                this.stop();
-                return;
+                if (this._loopEnabled) {
+                    this._timelinePosition = this._loopStart;
+                    this._wallClockAnchor = this._getTime();
+                } else {
+                    this.stop();
+                    return;
+                }
             }
 
             this._notify();
@@ -214,7 +276,10 @@
                 currentTime: this.getCurrentTime(),
                 duration: this.duration,
                 playbackRate: this.playbackRate,
-                state: this.state
+                state: this.state,
+                isLooping: this._loopEnabled,
+                loopStart: this._loopStart,
+                loopEnd: this._loopEnd
             };
         }
 
@@ -246,8 +311,16 @@
                 return;
             }
 
+            const cur = this.getCurrentTime();
+
+            // Check if reached loop boundary
+            if (this._loopEnabled && this._loopEnd > this._loopStart && cur >= this._loopEnd) {
+                this.seek(this._loopStart);
+                return;
+            }
+
             // Check if reached end of duration
-            if (this.duration > 0 && this.getCurrentTime() >= this.duration) {
+            if (this.duration > 0 && cur >= this.duration) {
                 this._timelinePosition = this.duration;
                 this.stop();
                 return;

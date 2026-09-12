@@ -19,6 +19,13 @@ from .simplification import (
     reduce_chord_harmony,
     evaluate_beginner_difficulty,
 )
+from .practice_feedback import (
+    MatchingMode,
+    FeedbackStatus,
+    TimingPhase,
+    evaluate_note_matching,
+    compute_practice_feedback,
+)
 
 __all__ = [
     "NOTE_NAMES",
@@ -35,4 +42,9 @@ __all__ = [
     "simplify_progression",
     "reduce_chord_harmony",
     "evaluate_beginner_difficulty",
+    "MatchingMode",
+    "FeedbackStatus",
+    "TimingPhase",
+    "evaluate_note_matching",
+    "compute_practice_feedback",
 ]

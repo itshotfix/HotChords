@@ -2,85 +2,113 @@
 
 Thank you for your interest in contributing to HotChords! 
 
-We welcome contributions from Developers, DSP engineers, MIR researchers, Musicians, Piano players, Piano teachers, and UX designers. Whether you want to improve chord detection accuracy, refine the piano visualization, or help beginners learn better, there is a place for you here.
+HotChords is an open-source, local-first music workstation designed to bridge cutting-edge Music Information Retrieval (MIR) with practical, accessible piano education. We welcome contributions from developers, MIR researchers, DSP engineers, pianists, and music theory enthusiasts.
 
-## Project Philosophy
+---
 
-HotChords operates on two core principles:
+## 1. Core Principles
 
-1. **Free and Local**: The application must run entirely offline on a user's machine. No cloud APIs, no telemetry, no subscriptions.
-2. **Accuracy over Features**: A smaller number of reliable, highly accurate features is better than a large number of inaccurate ones. New features are welcome, but never at the expense of detection quality or application stability.
+1. **Local & Privacy-Preserving:** HotChords must run 100% locally on standard user machines without sending audio to remote APIs or collecting tracking telemetry.
+2. **Harmonic Transparency:** We never claim synthetic or false detection accuracy. Confidence values must be mathematically formulated, explainable, and transparent to the user.
+3. **Ergonomic Playability:** Voicings and beginner chord simplifications must follow sound musical voice leading and biomechanically plausible hand fingerings.
+4. **Architectural Integrity:** All UI and audio renderers must synchronize strictly to the master `PlaybackClock` to avoid timing drift or clock fighting.
 
-## Development Setup
+---
 
-### Local Environment
-- **Python 3.10, 3.11, or 3.12**
-- **FFmpeg**: Bundled automatically via the `imageio-ffmpeg` package. No manual installation is required for most platforms.
+## 2. Development Setup
 
-### Initializing the Project
+### Prerequisites
+- **Python 3.10+** (Python 3.10 through 3.14)
+- **Node.js 18+** (for running frontend and lifecycle tests)
+- **FFmpeg** (installed locally or via your OS package manager)
 
+### Local Setup
 ```bash
-git clone https://github.com/hotfix/hotchords.git
-cd hotchords
+# 1. Clone your fork
+git clone https://github.com/<your-username>/HotChords.git
+cd HotChords
 
+# 2. Setup Python virtual environment
 python3 -m venv venv
-source venv/bin/activate
-
+source venv/bin/activate   # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-python3 hotchords.py
+# 3. Setup Frontend test dependencies
+npm install
+
+# 4. Launch HotChords
+python hotchords.py
 ```
 
-The app will be available locally at `http://localhost:5500`.
+---
 
-## Code Organization
+## 3. Repository Structure
 
-Our architecture is simple and requires no build step:
+```
+HotChords/
+├── backend/
+│   ├── analysis/       # Audio QC, harmonic routing, MIR chord engines, loop detection
+│   ├── theory/         # Normalization, beginner simplification, piano voicing & fingering
+│   ├── models/         # Pydantic data contracts and timeline response schemas
+│   ├── api/            # FastAPI endpoints and background analysis worker
+│   └── benchmarks/     # Audio profiling and evaluation benchmarks
+├── frontend/
+│   ├── css/piano.css   # Single workspace design system and layout rules
+│   ├── index.html      # Permanent single-workspace application shell
+│   └── js/
+│       ├── audio/      # PlaybackClock, SongAudioController, PianoPlayback, Practice mic
+│       ├── engine/     # Real-time fingering, transitions, and theory formatters
+│       └── ui/         # DynamicChordReel, PianoKeyboard, WorkspaceHandController
+├── tests/              # 195 Python unit/integration tests + 55 Node client test suites
+└── docs/               # Architecture and technical specifications
+```
 
-- `backend/api/` - FastAPI endpoints (`router.py`)
-- `backend/analysis/` - DSP, harmonic separation, and Viterbi HMM pipeline
-- `backend/theory/` - Music theory, enharmonics, and simplification algorithms
-- `frontend/index.html` - SPA shell
-- `frontend/css/` - Vanilla CSS styles
-- `frontend/js/` - Vanilla JS modules (Fingering engine, UI renderers, GSAP animation)
+---
 
-## Coding Conventions
+## 4. Coding & Architecture Guidelines
 
-- **Python**: Follow PEP 8. Use standard `try/except Exception as e` blocks. Keep `router.py` thin by delegating to `pipeline.py`.
-- **JavaScript**: Vanilla JS only. No npm, no Webpack, no frameworks. Keep all logic organized into modular objects on the global `window` object.
-- **CSS**: All styles must reside in `piano.css`. No inline styles. Use CSS variables for theme colors.
+### Python (Backend)
+- Adhere to PEP 8 standards and type hinting where practical.
+- Keep `backend/api/router.py` thin; delegate all business and DSP logic to `backend/analysis/` and `backend/theory/`.
+- Ensure all new analysis outputs conform strictly to `SONG_RESULT_CONTRACT.md`.
 
-## Documentation Expectations
+### JavaScript & CSS (Frontend)
+- Use **pure Vanilla ES6+** without adding heavy frontend frameworks.
+- All playback actions, seek events, and timeline cursors must bind to `PlaybackClock`. Do not create competing timers or uncoordinated `setInterval` loops.
+- Do not create multiple active `AudioContext` instances; reuse the shared service from `PianoPlaybackService`.
+- Keep CSS modular and organized in `frontend/css/piano.css`. Avoid ad-hoc inline styles.
 
-- All public Python functions, especially those involving DSP or Music Theory, must include a docstring explaining **what** it does and **why**. 
-- Javascript comments should explain the *algorithmic or musical decisions* behind the code, rather than just narrating the syntax.
-- If you change a core algorithm, please update `docs/ARCHITECTURE.md` or the relevant pipeline markdown files.
+---
 
-## Testing Expectations
+## 5. Testing Expectations
 
-We do not currently have a comprehensive automated test suite, but all pull requests must be manually verified:
-1. Ensure the app starts without errors.
-2. Upload a test audio file.
-3. Verify the chord timeline, piano visualization, and hand animations render correctly at different viewport sizes.
+All pull requests must pass the complete test suite before merging:
 
-## Issue Reporting
+```bash
+# 1. Run all Python backend tests (195 tests)
+pytest tests/
 
-When reporting a bug, please include:
-- Your OS and Python version.
-- The audio format that caused the issue.
-- The full terminal traceback.
-- Steps to reproduce.
+# 2. Run all frontend and UI/UX invariant tests (37 tests)
+npm test
 
-## Feature Proposals
+# 3. Run master PlaybackClock & dual-renderer lifecycle tests (6 scenarios)
+node tests/test_playback_lifecycle.js
 
-If you have an idea for a major feature (e.g., a new simplification algorithm, moving to WASM for DSP), please open a GitHub Discussion first. This ensures alignment with the product vision before you write code.
+# 4. Run client pitch detection and feedback bridge tests (12 tests)
+node tests/test_phase11_client_pitch_and_feedback.js
+node tests/test_phase12_client_metrics.js
+```
 
-## Pull Requests
+### Adding New Tests
+- When adding a backend feature, add corresponding pytest unit tests in `tests/test_<feature>.py`.
+- When modifying playback or UI components, add verification assertions to `tests/test_playback_lifecycle.js` or `tests/test_app_ui.js`.
 
-1. **Fork** the repository and create a branch (`feature/my-improvement`).
-2. **Make your changes** with focused, atomic commits.
-3. **Test manually** using the steps above.
-4. **Write a clear commit message** explaining the *why* behind your changes.
-5. **Open a Pull Request** against `main`.
+---
 
-Thank you for helping us turn any song into something a beginner pianist can play!
+## 6. Pull Request Process
+
+1. **Open an Issue / Discussion:** For major architectural changes or new MIR algorithms, open a GitHub Issue first to align with the core maintainers.
+2. **Create a Feature Branch:** `git checkout -b feature/your-feature-name`
+3. **Commit Atomic Changes:** Write descriptive commit messages explaining *what* was changed and *why*.
+4. **Verify Locally:** Ensure `pytest tests/` and `npm test` pass 100% green and no console errors occur.
+5. **Submit PR:** Open your pull request against the `main` branch with a summary of changes and test evidence.

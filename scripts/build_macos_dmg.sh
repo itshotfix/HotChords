@@ -2,7 +2,7 @@
 set -e
 
 echo "═════════════════════════════════════════════════════════════"
-echo "  Building HotChords v0.3.0 Standalone macOS DMG Installer  "
+echo "  Building HotChords v0.4.0 Standalone macOS DMG Installer  "
 echo "═════════════════════════════════════════════════════════════"
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -10,7 +10,7 @@ DIST_DIR="${PROJECT_ROOT}/dist"
 APP_NAME="HotChords"
 APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 DMG_STAGING="${DIST_DIR}/dmg_staging"
-DMG_OUTPUT="${DIST_DIR}/HotChords-v0.3.0-macOS-AppleSilicon.dmg"
+DMG_OUTPUT="${DIST_DIR}/HotChords-v0.4.0-macOS-AppleSilicon.dmg"
 
 rm -rf "${APP_BUNDLE}" "${DMG_STAGING}" "${DMG_OUTPUT}"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS"
@@ -41,9 +41,9 @@ cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.3.0</string>
+    <string>0.4.0</string>
     <key>CFBundleVersion</key>
-    <string>0.3.0</string>
+    <string>0.4.0</string>
     <key>LSMinimumSystemVersion</key>
     <string>11.0</string>
     <key>NSHighResolutionCapable</key>

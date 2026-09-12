@@ -33,7 +33,7 @@
   --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
 
-  --piano-height: clamp(160px, 24vh, 260px);
+  --piano-height: clamp(135px, 19vh, 200px);
   --stage-gutter: clamp(14px, 2.6vw, 36px);
   --stage-padding: clamp(14px, 2.4vh, 28px);
 }
@@ -683,6 +683,15 @@ header.app-header {
   align-items: center;
   gap: 5px;
   white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+
+.ws-meta-item[title] {
+  cursor: help;
+}
+
+.ws-meta-item[title]:hover .ws-meta-val {
+  color: var(--blue);
 }
 
 .ws-meta-label {
@@ -802,45 +811,277 @@ header.app-header {
   font-weight: 700;
 }
 
+.ctrl-btn.btn-mic-active {
+  background: rgba(229, 72, 77, 0.12);
+  border-color: #E5484D;
+  color: #E5484D;
+  font-weight: 700;
+  animation: pulseDot 1.6s infinite ease-in-out;
+}
+
+.ctrl-btn.btn-loop-active {
+  background: rgba(52, 199, 89, 0.12);
+  border-color: #34C759;
+  color: #34C759;
+  font-weight: 700;
+}
+
+/* Audio Output Selector pill group */
+.ws-audio-selector {
+  display: flex;
+  background: var(--surface-secondary);
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid var(--border-light);
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.audio-src-btn {
+  border: none;
+  background: transparent;
+  padding: 5px 12px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.audio-src-btn.active {
+  background: var(--card);
+  color: var(--blue);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* Real-Time Feedback Chip */
+.ws-feedback-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
+  margin-top: 6px;
+}
+
+.ws-feedback-chip.feedback-listening {
+  background: rgba(0, 113, 227, 0.08);
+  border-color: rgba(0, 113, 227, 0.3);
+  color: var(--blue);
+}
+
+.ws-feedback-chip.feedback-match {
+  background: rgba(52, 199, 89, 0.12);
+  border-color: #34C759;
+  color: #34C759;
+}
+
+.ws-feedback-chip.feedback-partial {
+  background: rgba(255, 149, 0, 0.12);
+  border-color: #FF9500;
+  color: #FF9500;
+}
+
+.ws-feedback-chip.feedback-wrong {
+  background: rgba(229, 72, 77, 0.12);
+  border-color: #E5484D;
+  color: #E5484D;
+}
+
+.ws-feedback-chip.feedback-noinput {
+  background: var(--surface-secondary);
+  border-color: var(--border-light);
+  color: var(--text-muted);
+}
+
+
 
 /* ── ROW 4: Waveform + Transport ─────────────────────────────────────────── */
 .ws-playback {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 7px clamp(12px, 2.5vw, 28px);
+  gap: clamp(6px, 1.0vh, 10px);
+  padding: clamp(8px, 1.2vh, 14px) clamp(14px, 2.5vw, 32px);
   background: var(--card);
   border-top: 1px solid var(--border-light);
   flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
+.ws-playback-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ws-playback-left-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ws-playback-right-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 .ws-waveform {
   position: relative;
-  height: 28px;
+  width: 100%;
+  height: clamp(28px, 3.8vh, 38px);
   cursor: pointer;
   background: var(--surface-secondary);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--border-light);
+  box-sizing: border-box;
 }
 
 .ws-waveform canvas {
   width: 100%;
   height: 100%;
+  display: block;
+}
+
+#playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--blue);
+  box-shadow: 0 0 8px var(--blue);
+  pointer-events: none;
+  z-index: 10;
+  transition: none;
 }
 
 .ws-transport-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 26px;
+  width: 100%;
+  gap: clamp(10px, 1.4vw, 16px);
+  box-sizing: border-box;
+}
+
+.play-btn {
+  width: clamp(32px, 3.0vw, 38px);
+  height: clamp(32px, 3.0vw, 38px);
+  min-width: clamp(32px, 3.0vw, 38px);
+  border-radius: 50%;
+  background: var(--blue);
+  border: none;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.28);
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.play-btn:hover {
+  background: var(--blue-hover);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.38);
+}
+
+.play-btn:active {
+  transform: scale(0.95);
+}
+
+.time-disp {
+  font-size: clamp(0.78rem, 1.0vw, 0.88rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  min-width: 36px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+#cur-time {
+  text-align: left;
+}
+
+#dur-time {
+  text-align: right;
+  color: var(--text-muted);
+}
+
+.seek-bar {
+  flex: 1;
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border-light);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  margin: 0;
+}
+
+.seek-bar:hover {
+  background: var(--border);
+}
+
+.seek-bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.seek-bar::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  background: var(--blue-hover);
+}
+
+.seek-bar::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--blue);
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.seek-bar::-moz-range-thumb:hover {
+  transform: scale(1.25);
+  background: var(--blue-hover);
 }
 
 /* ── ROW 3: Central Learning Area (Hands + 3-Chord Timeline) ──────────────── */
 .ws-learning-area {
   display: grid;
-  grid-template-columns: clamp(170px, 20vw, 260px) 1fr clamp(170px, 20vw, 260px);
+  grid-template-columns: clamp(175px, 20vw, 275px) 1fr clamp(175px, 20vw, 275px);
   grid-template-areas: "lh center rh";
   min-height: 0;
   overflow: hidden;
@@ -853,9 +1094,9 @@ header.app-header {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(8px, 1.5vh, 14px);
+  gap: clamp(6px, 1.2vh, 12px);
   background: var(--card);
-  padding: clamp(12px, 2vh, 24px) clamp(8px, 1.4vw, 16px);
+  padding: clamp(10px, 1.8vh, 20px) clamp(8px, 1.4vw, 16px);
   overflow: hidden;
   min-width: 0;
   user-select: none;
@@ -867,18 +1108,19 @@ header.app-header {
 .ws-hand-label {
   font-size: clamp(0.70rem, 1.1vw, 0.82rem);
   font-weight: 800;
-  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.8px;
   text-align: center;
+  color: var(--text-muted);
 }
 
 .ws-hand-svg {
-  width: clamp(120px, 15vw, 185px);
-  height: clamp(130px, 17vw, 205px);
+  width: clamp(140px, 17vw, 210px);
+  height: clamp(145px, 18vw, 220px);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .ws-hand-svg svg {
@@ -893,7 +1135,7 @@ header.app-header {
   gap: 4px;
   align-items: center;
   width: 100%;
-  max-width: 180px;
+  max-width: 190px;
 }
 
 .ws-finger-chip {
@@ -904,7 +1146,7 @@ header.app-header {
   background: var(--surface-secondary);
   border: 1px solid var(--border-light);
   border-radius: 6px;
-  padding: 3px 9px;
+  padding: 3px 10px;
   font-size: 0.74rem;
   font-weight: 700;
   width: 100%;
@@ -925,24 +1167,25 @@ header.app-header {
   overflow: hidden;
   width: 100%;
   height: 100%;
-  padding: clamp(8px, 1.5vh, 16px) 0;
+  padding: clamp(6px, 1.2vh, 14px) 0;
 }
 
-/* Fixed Stationary Labels Row */
+/* Fixed Stationary Labels Row (Structural Anchors) */
 .ws-fixed-labels-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: clamp(520px, 75vw, 860px);
-  margin-bottom: clamp(6px, 1.2vh, 12px);
-  padding: 0 clamp(12px, 3vw, 28px);
+  max-width: clamp(480px, 70vw, 860px);
+  margin-bottom: clamp(4px, 0.8vh, 10px);
+  padding: 0 clamp(8px, 2vw, 20px);
   box-sizing: border-box;
   flex-shrink: 0;
+  user-select: none;
 }
 
 .ws-fixed-label {
-  font-size: clamp(0.70rem, 1.1vw, 0.82rem);
+  font-size: clamp(0.68rem, 1.0vw, 0.80rem);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1.6px;
@@ -950,9 +1193,9 @@ header.app-header {
   user-select: none;
 }
 
-.ws-fixed-label--prev    { width: 25%; color: var(--text-muted); opacity: 0.75; }
+.ws-fixed-label--prev    { width: 25%; color: var(--text-muted); opacity: 0.70; }
 .ws-fixed-label--current { width: 50%; color: var(--blue); letter-spacing: 2px; }
-.ws-fixed-label--next    { width: 25%; color: var(--text-muted); opacity: 0.75; }
+.ws-fixed-label--next    { width: 25%; color: var(--text-muted); opacity: 0.70; }
 
 /* ── 3-Chord Viewport & Carousel ─────────────────────────────────────────── */
 .ws-chord-viewport {
@@ -961,8 +1204,9 @@ header.app-header {
   align-items: center;
   justify-content: center;
   width: 100%;
+  max-width: clamp(480px, 70vw, 860px);
   height: 100%;
-  min-height: clamp(160px, 24vh, 280px);
+  min-height: clamp(140px, 20vh, 260px);
   overflow: hidden;
 }
 
@@ -973,7 +1217,7 @@ header.app-header {
   overflow: hidden;
 }
 
-/* Individual chord cards: positioned absolutely at center and scaled/translated */
+/* Individual chord cards: centered absolutely and transformed via WAAPI */
 .chord-card {
   position: absolute;
   top: 50%;
@@ -985,6 +1229,7 @@ header.app-header {
   text-align: center;
   will-change: transform, opacity;
   user-select: none;
+  pointer-events: auto;
 }
 
 .chord-card--prev {
@@ -1003,39 +1248,41 @@ header.app-header {
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.03em;
-  font-size: clamp(2.4rem, 5.2vw, 3.8rem);
+  font-size: clamp(2.2rem, 4.8vw, 3.6rem);
   color: var(--text-muted);
+  transition: color 0.2s ease;
 }
 
 /* Hero styling on current card */
 .chord-card--current .chord-card-name,
 .chord-card-name--hero {
-  font-size: clamp(3.8rem, 8.5vw, 6.2rem);
+  font-size: clamp(3.4rem, 7.8vw, 5.8rem);
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -2px;
   color: var(--blue);
   text-shadow:
-    0 0 35px rgba(0, 113, 227, 0.40),
-    0 0 70px rgba(0, 113, 227, 0.18);
+    0 0 30px rgba(0, 113, 227, 0.35),
+    0 0 60px rgba(0, 113, 227, 0.16);
 }
 
 .chord-card-voicing {
-  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  font-size: clamp(0.95rem, 1.6vw, 1.25rem);
   font-weight: 700;
   color: var(--blue);
   opacity: 0.90;
-  margin-top: 8px;
+  margin-top: 6px;
   letter-spacing: 0.8px;
+  min-height: 1.2em;
 }
 
 .chord-progress-track {
-  width: clamp(140px, 24vw, 240px);
+  width: clamp(130px, 22vw, 220px);
   height: 5px;
-  background: rgba(0, 113, 227, 0.15);
+  background: rgba(0, 113, 227, 0.14);
   border-radius: 3px;
   overflow: hidden;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .chord-card--prev .chord-progress-track,
@@ -1046,6 +1293,7 @@ header.app-header {
   background: linear-gradient(90deg, var(--blue), #34AADC);
   width: 0%;
   border-radius: 3px;
+  transition: width 0.05s linear;
 }
 
 /* ── ROW 4: Persistent Piano ─────────────────────────────────────────────── */

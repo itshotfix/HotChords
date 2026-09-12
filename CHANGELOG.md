@@ -6,6 +6,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v0.4.0] — Harmonic Intelligence, Four-Chord Loop & Real-Time Practice (2026-09-12)
+
+### Added
+- **Multi-Engine Harmonic Evidence Router:** Ensemble consensus combining `lv-chordia` deep neural chord transcription with CQT Chroma fallback and slash chord / bass fusion.
+- **Harmonic Source & Instrument Attribution:** Identifies the primary harmonic carrier (`Harmonic Stem`, `Piano`, `Guitar`, `Original Mix`) while strictly excluding drums and vocals.
+- **Chord Confidence & Mathematical Transparency:** Computes explicit reliability metrics ($0\dots100\%$) based on harmonic strength ($40\%$), temporal stability ($35\%$), and beat alignment ($25\%$), with detailed breakdown tooltips in the UI.
+- **Four-Chord Loop Practice Engine:** Sliding 4-chord progression detection under modulo-12 transposition invariants with automatic zero-drift hardware loop binding (`0:00 - 0:20`).
+- **Adaptive Beginner Chord Simplification:** Intelligently maps extended and jazz chords into clean root-position triads while preserving structural harmony.
+- **Dynamic Piano Voicings & Ergonomic Fingering:** Voice-led chord inversions and biomechanical finger assignment ($1\dots5$) displayed on an interactive 88-key piano keyboard and hand diagrams.
+- **Dual-Source Audio Architecture:** Full mutual exclusivity between polyphonic Salamander Grand Piano synthesizer and original track audio playback with OS-level pitch preservation.
+- **Real-Time Microphone Practice Mode:** Low-latency client-side YIN autocorrelation pitch detection with note tolerance ($150\text{ms}$ window) and practice metrics tracking.
+- **Comprehensive Automated Test Suite:** 195 Python backend tests and 55 Node client test suites covering MIR DSP, source separation, playback lifecycle, and practice calibration.
+
+### Changed
+- Refactored `SongAudioController` to preserve Object URL lifetimes and enforce explicit volume/unmuted states during track switching.
+- Standardized single `PlaybackClock` authority across UI ribbon, dynamic reel, keyboard canvas, and dual audio renderers.
+- Updated project API contracts (`SONG_RESULT_CONTRACT.md`) and package metadata to version `0.4.0`.
+
+### Fixed
+- Fixed audio source switching where original track playback had no audible volume due to premature Object URL revocation.
+- Fixed `run_pipeline()` callback compatibility and progress reporting under FastAPI background tasks.
+- Resolved race conditions during rapid seek jumps and loop wrap-around boundaries.
+
+---
+
 ## [v0.3.0] — Core Workspace Scale, Spatial Balance & Processing UX (2026-08-28)
 
 > [!IMPORTANT]

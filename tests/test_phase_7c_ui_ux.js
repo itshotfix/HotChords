@@ -365,7 +365,7 @@ function runAllTests() {
     test('20. Version number displayed', () => {
         const indexHtml = fs.readFileSync(path.join(__dirname, '../frontend/index.html'), 'utf8');
         assert.ok(
-            indexHtml.includes('v0.3') || indexHtml.includes('Ver 0.3') || indexHtml.includes('VER 0.3') || indexHtml.includes('0.3.0'),
+            indexHtml.includes('v0.4') || indexHtml.includes('Ver 0.4') || indexHtml.includes('VER 0.4') || indexHtml.includes('0.4.0'),
             'Header contains project version string'
         );
     });

@@ -20,8 +20,34 @@ from .timeline import (
     SongTimeline,
     analysis_to_song_timeline,
 )
+from .analysis_types import (
+    AudioStatus,
+    AudioProfile,
+    TimingData,
+    CandidateSourceEvidence,
+    InstrumentEvidence,
+    DetectionReliability,
+    AudioAnalysisMetadata,
+)
 
-APP_VERSION = "0.3.0"
+from .practice_session import (
+    PracticeStatus,
+    PracticeMode,
+    PracticeChordGuidance,
+    PracticeNoteFeedbackContract,
+    PracticeSession,
+    create_practice_session,
+    update_practice_session_time,
+    seek_practice_session,
+    pause_practice_session,
+    resume_practice_session,
+    reset_practice_session,
+    set_practice_tempo,
+    set_practice_simplification,
+    set_practice_transposition,
+)
+
+APP_VERSION = "0.4.0"
 
 __all__ = [
     "APP_VERSION",
@@ -39,6 +65,26 @@ __all__ = [
     "SongMetadata",
     "SongTimeline",
     "analysis_to_song_timeline",
+    "AudioStatus",
+    "AudioProfile",
+    "TimingData",
+    "CandidateSourceEvidence",
+    "InstrumentEvidence",
+    "DetectionReliability",
+    "AudioAnalysisMetadata",
+    "PracticeStatus",
+    "PracticeMode",
+    "PracticeChordGuidance",
+    "PracticeNoteFeedbackContract",
+    "PracticeSession",
+    "create_practice_session",
+    "update_practice_session_time",
+    "seek_practice_session",
+    "pause_practice_session",
+    "resume_practice_session",
+    "reset_practice_session",
+    "set_practice_tempo",
+    "set_practice_simplification",
+    "set_practice_transposition",
 ]
-
 

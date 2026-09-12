@@ -1,19 +1,24 @@
 /**
  * workspaceChordTimeline.js
  *
- * Single Workspace Chord Timeline for HotChords (Phase 2).
- * High-performance 3-chord physical sliding carousel (Previous < Current Hero > Next).
+ * High-Performance Deterministic 3-Chord Physical Sliding Timeline for HotChords.
+ * Architectural Standards: HotChords UI/UX & Animation Engineering Skills.
  *
- * Architecture:
+ * Sequence Geometry:
+ *   PREVIOUS (-1D)  <───  CURRENT HERO (0)  ───>  NEXT (+1D)
+ *
+ * Key Architecture:
+ * - Structural labels (`PREVIOUS`, `CURRENT CHORD`, `NEXT`) remain permanently fixed in space.
  * - Operates on 3 permanent DOM elements: #chord-prev, #chord-current, #chord-next.
- * - State machine updates ONLY when currentIndex actually changes.
- * - During a chord interval, only the progress indicator width updates (0 DOM/transform churn).
- * - Sequential +1 chord transition triggers a coordinated 4-lane WAAPI physical slide:
- *     1. Previous moves & fades out left (-1D -> -2D)
- *     2. Current moves left into Previous (0 -> -1D, scale 1.08 -> 0.55, opacity 1.0 -> 0.45)
- *     3. Next moves left into Current (+1D -> 0, scale 0.55 -> 1.08, opacity 0.45 -> 1.0, hero glow)
- *     4. Incoming new chord enters from right (+2D -> +1D, scale 0.35 -> 0.55, opacity 0 -> 0.45)
- * - Rapid seeking or multi-chord skips immediately cancel in-flight animations and snap to resting state.
+ * - Current Chord is the central pedagogical hero element (scale 1.15, opacity 1.0, glow, active progress track).
+ * - Previous & Next are visually secondary (scale 0.65, opacity 0.40-0.45, muted).
+ * - Chord transitions trigger a continuous 4-lane hardware-accelerated WAAPI physical slide:
+ *     1. Old Prev exits left (-1D -> -2D, scale 0.65 -> 0.38, opacity 0.40 -> 0)
+ *     2. Current glides left into Prev (0 -> -1D, scale 1.15 -> 0.65, opacity 1.0 -> 0.40)
+ *     3. Next glides left into Current (+1D -> 0, scale 0.65 -> 1.15, opacity 0.45 -> 1.0, hero glow)
+ *     4. Incoming new Next enters from right (+2D -> +1D, scale 0.38 -> 0.65, opacity 0 -> 0.45)
+ * - Seeking or rapid skipping immediately cancels active animations and snaps to clean resting state.
+ * - Pause freezes visual state; Resume seamlessly continues without state jumps.
  * - Respects prefers-reduced-motion.
  */
 
@@ -31,6 +36,7 @@
     let _reducedMotion = false;
     let _activeAnimations = [];
     let _transientNodes = [];
+    let _resizeObserver = null;
 
     // DOM Elements
     let _prevEl = null;
@@ -63,25 +69,42 @@
         return c.notes.map(n => typeof n === 'number' ? PITCH[n % 12] : n).join(' · ');
     }
 
+    /**
+     * Resolves chord index based on canonical PlaybackClock time.
+     * Matches CurrentChordEngine boundary conditions.
+     */
     function _resolveIndex(currentTime) {
-        if (!_chords.length) return -1;
-        let found = -1;
+        if (!_chords || !_chords.length) return -1;
+
+        const firstStart = getStart(_chords[0]);
+        if (currentTime < firstStart) return -1;
+
+        const lastEnd = getEnd(_chords[_chords.length - 1]);
+        if (currentTime >= lastEnd) return _chords.length;
+
         for (let i = 0; i < _chords.length; i++) {
-            if (currentTime >= getStart(_chords[i])) {
-                found = i;
-            } else {
-                break;
+            const start = getStart(_chords[i]);
+            const nextStart = (i < _chords.length - 1) ? getStart(_chords[i + 1]) : getEnd(_chords[i]);
+            if (currentTime >= start && currentTime < nextStart) {
+                return i;
             }
         }
-        return found;
+        return -1;
     }
 
+    /**
+     * Calculates the exact horizontal lane displacement distance (D).
+     * Perfectly aligns with the 25% / 50% / 25% column layout of the fixed structural labels.
+     */
     function _getLaneDistance() {
         const width = _viewportEl ? _viewportEl.clientWidth : 700;
-        return Math.max(160, Math.min(360, Math.round(width * 0.30)));
+        // The center of Previous is at -37.5% of width, Current at 0, Next at +37.5%
+        return Math.max(140, Math.min(360, Math.round(width * 0.375)));
     }
 
-
+    /**
+     * Cancels all active in-flight WAAPI animations and purges transient DOM nodes.
+     */
     function _cancelAnimations() {
         for (let i = 0; i < _activeAnimations.length; i++) {
             try { _activeAnimations[i].cancel(); } catch (e) {}
@@ -95,6 +118,9 @@
         _isAnimating = false;
     }
 
+    /**
+     * Updates card DOM data (text content, voicing, class flags).
+     */
     function _setCardData(el, chord, role) {
         if (!el) return;
 
@@ -114,41 +140,70 @@
         el.classList.toggle('chord-card--next', role === 'next');
     }
 
+    /**
+     * Sets GPU-accelerated resting transform and opacity for a given role.
+     */
     function _applyRestingTransform(el, role, D) {
         if (!el) return;
         if (role === 'prev') {
-            el.style.transform = `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.68)`;
-            el.style.opacity = '0.45';
+            el.style.transform = `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.65)`;
+            el.style.opacity = '0.40';
         } else if (role === 'current') {
-            el.style.transform = 'translate3d(-50%, -50%, 0) scale(1.18)';
+            el.style.transform = 'translate3d(-50%, -50%, 0) scale(1.15)';
             el.style.opacity = '1.0';
         } else if (role === 'next') {
-            el.style.transform = `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.68)`;
+            el.style.transform = `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.65)`;
             el.style.opacity = '0.45';
         }
     }
 
+    /**
+     * Instant resting rebuild without transition animations (used on seek, init, mode-change).
+     */
     function _instantRebuild(idx) {
         _cancelAnimations();
 
         if (!_prevEl || !_curEl || !_nextEl) return;
 
         const D = _getLaneDistance();
-        const prevChord = idx > 0 ? _chords[idx - 1] : null;
-        const curChord  = idx >= 0 ? _chords[idx] : null;
-        const nextChord = (idx >= 0 && idx < _chords.length - 1) ? _chords[idx + 1] : (_chords.length && idx < 0 ? _chords[0] : null);
+        let prevChord = null;
+        let curChord = null;
+        let nextChord = null;
+
+        if (idx < 0) {
+            prevChord = null;
+            curChord = null;
+            nextChord = _chords.length > 0 ? _chords[0] : null;
+        } else if (idx >= _chords.length) {
+            prevChord = _chords.length > 0 ? _chords[_chords.length - 1] : null;
+            curChord = null;
+            nextChord = null;
+        } else {
+            prevChord = idx > 0 ? _chords[idx - 1] : null;
+            curChord = _chords[idx];
+            nextChord = idx < _chords.length - 1 ? _chords[idx + 1] : null;
+        }
 
         _setCardData(_prevEl, prevChord, 'prev');
-        _setCardData(_curEl,  curChord,  'current');
+        _setCardData(_curEl, curChord, 'current');
         _setCardData(_nextEl, nextChord, 'next');
 
         _applyRestingTransform(_prevEl, 'prev', D);
         _applyRestingTransform(_curEl, 'current', D);
         _applyRestingTransform(_nextEl, 'next', D);
 
-        if (_fillEl) _fillEl.style.width = '0%';
+        if (_fillEl) {
+            if (curChord && typeof PlaybackClock !== 'undefined') {
+                _updateProgress(PlaybackClock.currentTime, idx);
+            } else {
+                _fillEl.style.width = '0%';
+            }
+        }
     }
 
+    /**
+     * Coordinated 4-lane WAAPI physical slide for sequential +1 chord transition.
+     */
     function _animateForward(newIdx) {
         _cancelAnimations();
 
@@ -160,7 +215,7 @@
         _isAnimating = true;
         const D = _getLaneDistance();
 
-        // Incoming chord entering from right at lane +2D
+        // 1. Create temporary incoming card at +2D lane (entering from right)
         const incomingNextChord = newIdx < _chords.length - 1 ? _chords[newIdx + 1] : null;
 
         const incoming = document.createElement('div');
@@ -172,44 +227,43 @@
         incoming.style.position = 'absolute';
         incoming.style.top = '50%';
         incoming.style.left = '50%';
-        incoming.style.transform = `translate3d(calc(-50% + ${2 * D}px), -50%, 0) scale(0.40)`;
+        incoming.style.transform = `translate3d(calc(-50% + ${2 * D}px), -50%, 0) scale(0.38)`;
         incoming.style.opacity = '0';
 
         _trackEl.appendChild(incoming);
         _transientNodes.push(incoming);
 
-        // Hide voicing on current during movement to prevent text layout pop
+        // Hide voicing text during physical translation to prevent font reflow pop
         const curVoiceEl = _curEl.querySelector('[data-chord-voicing]');
         if (curVoiceEl) curVoiceEl.style.display = 'none';
 
         const animOptions = { duration: ANIM_DURATION_MS, easing: ANIM_EASING, fill: 'none' };
 
         const anims = [
-            // 1. Prev exits left (-1D -> -2D)
+            // 1. Old Prev exits left (-1D -> -2D)
             _prevEl.animate([
-                { transform: `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.68)`, opacity: 0.45 },
-                { transform: `translate3d(calc(-50% - ${2 * D}px), -50%, 0) scale(0.40)`, opacity: 0 }
+                { transform: `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.65)`, opacity: 0.40 },
+                { transform: `translate3d(calc(-50% - ${2 * D}px), -50%, 0) scale(0.38)`, opacity: 0 }
             ], animOptions),
 
             // 2. Current moves to prev (0 -> -1D)
             _curEl.animate([
-                { transform: `translate3d(-50%, -50%, 0) scale(1.18)`, opacity: 1.0 },
-                { transform: `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.68)`, opacity: 0.45 }
+                { transform: `translate3d(-50%, -50%, 0) scale(1.15)`, opacity: 1.0 },
+                { transform: `translate3d(calc(-50% - ${D}px), -50%, 0) scale(0.65)`, opacity: 0.40 }
             ], animOptions),
 
             // 3. Next moves to current (+1D -> 0)
             _nextEl.animate([
-                { transform: `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.68)`, opacity: 0.45 },
-                { transform: `translate3d(-50%, -50%, 0) scale(1.18)`, opacity: 1.0 }
+                { transform: `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.65)`, opacity: 0.45 },
+                { transform: `translate3d(-50%, -50%, 0) scale(1.15)`, opacity: 1.0 }
             ], animOptions),
 
             // 4. Incoming moves to next (+2D -> +1D)
             incoming.animate([
-                { transform: `translate3d(calc(-50% + ${2 * D}px), -50%, 0) scale(0.40)`, opacity: 0 },
-                { transform: `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.68)`, opacity: 0.45 }
+                { transform: `translate3d(calc(-50% + ${2 * D}px), -50%, 0) scale(0.38)`, opacity: 0 },
+                { transform: `translate3d(calc(-50% + ${D}px), -50%, 0) scale(0.65)`, opacity: 0.45 }
             ], animOptions)
         ];
-
 
         _activeAnimations = anims;
 
@@ -223,21 +277,27 @@
         };
     }
 
+    /**
+     * Updates the duration progress indicator inside the Current Chord card.
+     */
     function _updateProgress(currentTime, idx) {
-        if (!_fillEl || idx < 0 || !_chords[idx]) {
+        if (!_fillEl || idx < 0 || idx >= _chords.length || !_chords[idx]) {
             if (_fillEl) _fillEl.style.width = '0%';
             return;
         }
 
         const chord = _chords[idx];
         const start = getStart(chord);
-        const end   = getEnd(chord);
-        const dur   = Math.max(0.05, end - start);
-        const pct   = Math.max(0, Math.min(100, ((currentTime - start) / dur) * 100));
+        const end = getEnd(chord);
+        const dur = Math.max(0.05, end - start);
+        const pct = Math.max(0, Math.min(100, ((currentTime - start) / dur) * 100));
         _fillEl.style.width = `${pct.toFixed(1)}%`;
     }
 
     const WorkspaceChordTimeline = {
+        /**
+         * Mounts DOM elements and binds listeners.
+         */
         init(opts = {}) {
             _prevEl     = opts.prevEl     || document.getElementById('chord-prev');
             _curEl      = opts.curEl      || document.getElementById('chord-current');
@@ -261,19 +321,38 @@
                     }
                 };
             }
+
             if (_nextEl) {
                 _nextEl.style.cursor = 'pointer';
                 _nextEl.onclick = () => {
                     if (_currentIdx >= 0 && _currentIdx < _chords.length - 1 && _onSeek) {
                         _onSeek(getStart(_chords[_currentIdx + 1]));
+                    } else if (_currentIdx < 0 && _chords.length > 0 && _onSeek) {
+                        _onSeek(getStart(_chords[0]));
                     }
                 };
             }
 
-            // Window resize handler to reposition cards
-            if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+            // Clean up existing ResizeObserver
+            if (_resizeObserver) {
+                _resizeObserver.disconnect();
+                _resizeObserver = null;
+            }
+
+            // Responsive layout observer
+            if (typeof ResizeObserver !== 'undefined' && _viewportEl) {
+                _resizeObserver = new ResizeObserver(() => {
+                    if (!_isAnimating) {
+                        const D = _getLaneDistance();
+                        _applyRestingTransform(_prevEl, 'prev', D);
+                        _applyRestingTransform(_curEl, 'current', D);
+                        _applyRestingTransform(_nextEl, 'next', D);
+                    }
+                });
+                _resizeObserver.observe(_viewportEl);
+            } else if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
                 window.addEventListener('resize', () => {
-                    if (!_isAnimating && _currentIdx >= 0) {
+                    if (!_isAnimating) {
                         const D = _getLaneDistance();
                         _applyRestingTransform(_prevEl, 'prev', D);
                         _applyRestingTransform(_curEl, 'current', D);
@@ -285,6 +364,9 @@
             _instantRebuild(-1);
         },
 
+        /**
+         * Loads chord dataset for active mode (simplified or original).
+         */
         loadChords(chords) {
             _chords = Array.isArray(chords) ? chords : [];
             _currentIdx = -1;
@@ -296,6 +378,10 @@
             _instantRebuild(idx);
         },
 
+        /**
+         * Frame-driven update anchored to PlaybackClock.
+         * Triggers animation strictly on chord index boundaries.
+         */
         update(currentTime) {
             if (!_chords.length) return;
 
@@ -305,18 +391,21 @@
                 const isForwardStep = (newIdx === _currentIdx + 1) && newIdx >= 0;
 
                 if (isForwardStep) {
-                    _animateForward(newIdx);
                     _currentIdx = newIdx;
+                    _animateForward(newIdx);
                 } else {
                     _currentIdx = newIdx;
                     _instantRebuild(newIdx);
                 }
             } else {
-                // Same chord: ONLY update progress bar, zero DOM transform churn
+                // Same chord interval: update only progress bar with zero DOM transform churn
                 _updateProgress(currentTime, _currentIdx);
             }
         },
 
+        /**
+         * Resets timeline to neutral empty state.
+         */
         reset() {
             _chords = [];
             _currentIdx = -1;

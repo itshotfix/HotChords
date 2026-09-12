@@ -3,13 +3,22 @@ backend/main.py
 Main entrypoint for HotChords. Starts the Uvicorn server and automatically opens the browser.
 """
 
+import sys
+import os
 import time
 import threading
 import webbrowser
-import uvicorn
 import socket
 import urllib.request
 import urllib.error
+
+# Ensure workspace root is in sys.path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+import uvicorn
+from backend.api.router import app
 
 def get_free_port(start_port=5500):
     """Find a free port starting from the given port."""
@@ -44,4 +53,4 @@ if __name__ == '__main__':
     threading.Thread(target=open_browser, daemon=True).start()
     
     # Start Uvicorn ASGI server
-    uvicorn.run("backend.api.router:app", host="127.0.0.1", port=PORT, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=PORT, log_level="info")

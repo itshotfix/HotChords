@@ -1,282 +1,136 @@
-# HotChords Architecture
+# HotChords System Architecture (v0.4.0)
 
-Technical reference for contributors and curious developers.
-
----
-
-## Overview
-
-HotChords is a locally-served web application. The Python backend runs a FastAPI/Uvicorn server that serves both the REST API and the static frontend. There is no external network dependency, no database, and no build step.
-
-```
-python3 hotchords.py
-    └── backend/main.py             starts Uvicorn + opens browser
-        └── backend/api/router.py   FastAPI app
-            ├── POST /analyze       receives audio file, starts background analysis
-            ├── GET  /progress      returns { msg, pct } polling data
-            ├── GET  /result        returns full JSON result when ready
-            └── /css, /js, /       serves frontend static files
-```
+HotChords is a local-first, interactive desktop audio workstation that transforms raw audio recordings into structured, playable piano arrangements with synchronized chord charts, keyboard voicings, and realtime practice feedback.
 
 ---
 
-## Backend: Audio Analysis Pipeline
+## 1. High-Level System Architecture
 
-### Entry: `backend/analysis/pipeline.py → run_pipeline(filepath)`
+```mermaid
+graph TD
+    A[Raw Audio File] --> B[Audio QC & Signal Profiling]
+    B --> C[Source Separation / HPSS Engine]
+    C --> D[Instrument & Harmonic Evidence Scoring]
+    D --> E[Harmonic Evidence Router]
 
-The pipeline runs in a FastAPI `BackgroundTask`. Progress is written to a global dict polled by the frontend via `/progress`.
+    subgraph Multi-Engine Chord Consensus
+        E --> F1[LV-Chordia Deep Ensemble Engine]
+        E --> F2[CQT Chroma Harmonic Fallback Engine]
+        F1 --> G[Multi-Engine Consensus & Agreement Fusion]
+        F2 --> G
+    end
 
-#### Stage 1 — Stem Separation (Optional)
+    G --> H[Bass Fusion & Inversion Detection]
+    H --> I[Temporal Smoothing & Post-Processing]
 
-```python
-# Demucs 'htdemucs' separates:
-#   sources[0] = drums
-#   sources[1] = bass
-#   sources[2] = other (melody/harmony)
-#   sources[3] = vocals
-#
-# We use [0]+[1]+[2] as the instrumental stem for analysis because
-# leaving vocals in confuses the chroma features with sung pitches.
-# Falls back to original file if Demucs is not installed or fails.
-instrumental_audio = sources[0] + sources[1] + sources[2]
-```
+    subgraph Song Structure & Practice Intelligence
+        I --> J[Structural Recurrence / Section Boundary Engine]
+        I --> K[Four-Chord Loop Detection Engine]
+        I --> L[Adaptive Beginner Simplification & Fingering]
+    end
 
-Device selection is automatic: CUDA → MPS (Apple Silicon) → CPU.
+    J --> M[Authoritative SongTimeline Data Contract]
+    K --> M
+    L --> M
 
-#### Stage 2 — Audio Loading
+    subgraph Frontend Single-Workspace Shell
+        M --> N[PlaybackClock Master Transport Authority]
+        N --> O1[UnifiedPianoPlaybackController / Sampler Synth]
+        N --> O2[SongAudioController / Original Track HTML5 Media]
+        N --> P[DynamicChordReel & Timeline Ribbon]
+        N --> Q[Interactive Piano Keyboard Canvas]
+        N --> R[Workspace Hand Diagram Animator]
+    end
 
-```python
-y, sr = librosa.load(path, sr=22050, mono=True)
-# 22kHz is sufficient for chroma features (max pitch: C7 ≈ 2093Hz)
-# and reduces memory by ~50% versus 44.1kHz.
-```
-
-#### Stage 3 — Harmonic-Percussive Source Separation (HPSS)
-
-```python
-y_harm = librosa.effects.harmonic(y, margin=4)
-# HPSS separates the spectrogram into harmonic (tonal) and percussive
-# (transient) components using median filtering.
-# margin=4 means the harmonic filter is 4× stricter — we aggressively
-# suppress drums and percussion to get cleaner chroma features.
-```
-
-#### Stage 4 — Chroma Constant-Q Transform (CQT)
-
-```python
-chroma = librosa.feature.chroma_cqt(y=y_harm, sr=sr, hop_length=512, bins_per_octave=36)
-# CQT is preferred over STFT chroma because its frequency bins are
-# logarithmically spaced — each octave has equal bin count.
-# 36 bins/octave = 3× oversampling (standard is 12) for higher pitch accuracy.
-# hop_length=512 at 22kHz → ~23ms per frame.
-```
-
-```python
-# Smooth chroma over a ~0.4s window to reduce note-onset transient noise.
-# Without smoothing, brief accidental notes create spurious chord detections.
-win = max(1, int(0.4 * sr / hop))
-chroma_s = np.apply_along_axis(lambda x: np.convolve(x, np.ones(win)/win, 'same'), 1, chroma)
-```
-
-#### Stage 5 — Chord Template Matching
-
-```python
-# Chord templates are L2-normalized 12-dimensional vectors.
-# Each element = expected chroma energy at that pitch class.
-# Cosine similarity between chroma observation and template measures chord fit.
-similarity = CHORD_MAT.T @ chroma_norm   # shape: (61 chords, frames)
-```
-
-**Overtone-aware templates** (in `_build_overtone_templates()`):
-```python
-# Real instruments produce overtones at integer multiples of the fundamental.
-# We model the first three relevant harmonics:
-v[pitch]              += 1.0   # Fundamental
-v[(pitch + 7)  % 12] += 0.35  # Perfect 5th (3rd harmonic) — very prominent
-v[(pitch + 4)  % 12] += 0.15  # Major 3rd (5th harmonic) — present in most timbres
-v[(pitch + 12) % 12] += 0.20  # Octave (2nd harmonic) — always present
-# This prevents the Major 5th overtone from making everything look like a power chord.
-```
-
-#### Stage 6 — Beat Quantization
-
-```python
-# Instead of classifying every frame independently (noisy), we aggregate
-# similarity scores within each beat-length segment.
-# This naturally aligns chord detections with the musical grid.
-beat_similarities[i] = similarity[:, mask].mean(axis=1)
-```
-
-#### Stage 7 — Viterbi HMM Decoding
-
-This is the most important accuracy improvement over naive argmax detection.
-
-**Transition matrix** (`build_transition_matrix(key, scale)`):
-```python
-# Music is not random — certain chord transitions are far more common.
-# The transition matrix biases the HMM toward musically sensible sequences:
-
-A[i, i] = 0.72         # 72% chance of staying on the same chord.
-                        # Chords typically last 1-4 beats, not 1 frame.
-
-weight *= 3.5           # Diatonic chords (in the detected key) are strongly preferred.
-                        # A song in C major mostly uses C, Dm, Em, F, G, Am, Bdim.
-
-weight *= 2.0           # Perfect 4th (5 semitones) and Perfect 5th (7 semitones) root
-                        # motion is extremely common in all Western music (e.g. G→C, C→G).
-```
-
-**Viterbi decoding** (`viterbi_decode()`):
-```python
-# Viterbi finds the globally optimal chord sequence given both the per-beat
-# acoustic observations AND the transition probabilities.
-# Computed in log space to prevent numerical underflow with long songs.
-log_A = np.log(transition_matrix + 1e-100)
-log_emissions = similarity * 9.0   # Scale factor converts cosine similarity to
-                                    # log-likelihood range comparable to log_A
-```
-
-#### Stage 8 — Theory Enrichment
-
-After chord sequence is finalized:
-- Each chord is run through `musician_friendly_name()` for enharmonic normalization
-- Roman numerals are computed relative to the detected key
-- A beginner chart is generated via `simplify_progression()` (triad collapse + duration filtering + optional transposition to easy key)
-
----
-
-## Music Theory Engine: `backend/theory/theory.py`
-
-### Enharmonic Normalization
-
-```python
-# Rule: prefer flat-side enharmonics for black-key roots because
-# musicians read Ab, Eb, Bb — not G#, D#, A#.
-# Exception: F# is kept as F# (common key in guitar music).
-ENHARMONIC_MAP = {
-    'G#': 'Ab',   # Ab is standard in Western notation
-    'D#': 'Eb',   # Eb appears in Bb jazz and classical keys
-    'A#': 'Bb',   # Bb is ubiquitous
-    'Gb': 'F#',   # F# is preferred for guitar contexts
-    ...
-}
-```
-
-### Chord Simplification (Beginner Mode)
-
-The simplification has three passes:
-1. **Triad collapse** — `Cmaj7 → C`, `Am7 → Am`, `Bdim → Bm` (with key-aware substitution)
-2. **Merge consecutive identical chords** — avoids rapid flicker at beat boundaries
-3. **Remove short passing chords** (<1.5s) — reduces cognitive load for learners
-
-### Transposition to Easy Key
-
-```python
-# If the detected key has many sharps/flats, suggest transposing to a beginner key:
-# Major: C (0 accidentals), G (1 sharp), F (1 flat)
-# Minor: Am (0), Em (1 sharp), Dm (1 flat)
-# 
-# The closest easy key by semitone distance is chosen.
-# The entire chord timeline is transposed chromatically.
+    subgraph Real-Time Practice & Evaluation
+        S[Microphone Audio Input] --> T[RealtimePitchDetector / Autocorrelation]
+        T --> U[PracticeFeedbackBridge & Note Tolerance]
+        U --> V[PracticeMetricsTracker / Session History]
+    end
 ```
 
 ---
 
-## Frontend Architecture
+## 2. Backend Analysis Pipeline (`backend/analysis/`)
 
-The frontend is a single-page application loaded from `frontend/index.html`. There is no bundler, no npm, and no build step. Modules are loaded via plain `<script>` tags in dependency order.
+### 2.1 Audio QC & Objective Profiling (`backend/analysis/profiling.py`)
+Before chord recognition begins, the input signal undergoes objective acoustic quality profiling:
+- **Signal-to-Noise Ratio (SNR):** Estimated across active vs. quiet frames.
+- **Dynamic Range & Crest Factor:** Measures peak-to-RMS ratios to detect compressed or distorted tracks.
+- **Clipping Ratio & Silence Detection:** Flags heavily clipped files ($>0.05\%$ samples at peak) or unanalyzable silence.
+- **Spectral Centroid & Rolloff:** Profiles harmonic distribution to determine acoustic vs. synthesized content.
 
-### Module Load Order
+### 2.2 Source Separation & Harmonic Routing (`backend/analysis/harmonic_evidence.py`, `source_separation.py`)
+- **Demucs Hybrid Transformer (`htdemucs`):** When available, decomposes the mix into `drums`, `bass`, `other` (harmonic carrier), and `vocals`.
+- **Harmonic-Percussive Source Separation (HPSS):** Applies median-filter mask separation ($margin=4$) to isolate tonal content from transient percussion.
+- **Instrument Evidence Scoring (`instrument_evidence.py`):** Calculates spectral flatness, harmonic energy, and chroma clarity across stems to rank candidate sources (`piano`, `guitar`, `other`, `mix`). Non-harmonic stems (`drums`, `vocals`) are strictly excluded from chord detection.
 
-```html
-<!-- 1. Core theory (no deps) -->
-<script src="/js/engine/musicTheoryFormatter.js"></script>
+### 2.3 Multi-Engine Chord Consensus (`backend/analysis/engine_manager.py`)
+HotChords uses an ensemble consensus architecture:
+1. **Large-Vocabulary Deep Engine (`lv_chordia_engine.py`):** Neural ensemble transcription model detecting triads, 7ths, inversions, and extended harmony.
+2. **CQT Chroma Correlation Fallback (`legacy_engine.py`):** Constant-Q transform with overtone-aware template matching (36 bins/octave) for robust fallback.
+3. **Source Agreement & Bass Fusion (`source_agreement.py`):** Combines detected root/bass notes from the isolated bass register with upper-structure harmony to detect slash chords (e.g., $C/E$, $G/B$) and computes cross-stem agreement percentages.
 
-<!-- 2. Fingering engine (no deps) -->
-<script src="/js/engine/pianoFingeringEngine.js"></script>
+### 2.4 Reliability & Confidence Scoring (`backend/analysis/confidence.py`)
+HotChords computes an honest, mathematical confidence metric ($0.0 \dots 1.0$) rather than synthetic accuracy claims:
+$$\text{Reliability} = 0.40 \cdot \text{HarmonicStrength} + 0.35 \cdot \text{TemporalStability} + 0.25 \cdot \text{BeatAlignment}$$
+- **Harmonic Strength:** Average template cosine fit or classifier softmax margin.
+- **Temporal Stability:** Penalty for rapid, unnatural harmonic oscillations.
+- **Beat Alignment:** Agreement with estimated downbeat and subdivision boundaries.
 
-<!-- 3. UI modules (depend on engine) -->
-<script src="/js/ui/handDiagrams.js"></script>
-<script src="/js/ui/pianoKeyboard.js"></script>
-<script src="/js/ui/keyboardOverlayManager.js"></script>
-
-<!-- 4. Animation (depends on GSAP CDN + piano) -->
-<script src="/js/animations/handAnimator.js"></script>
-
-<!-- 5. App logic in index.html inline <script> -->
-```
-
-### Piano Keyboard: `pianoKeyboard.js`
-
-The `PianoKeyboard` class generates a complete SVG of 61 piano keys (C2–C7) calculated from first principles:
-- White key width = `containerWidth / 36` (36 white keys in 61-key range)
-- Black key width = `whiteKeyWidth * 0.64` (standard piano proportion)
-- Black key positions use octave-relative offsets (`BLACK_OFFSETS`)
-
-Keys use **DOM state updates** rather than `innerHTML` re-renders on every chord change — this is critical for 60fps performance during playback.
-
-### Fingering Engine: `pianoFingeringEngine.js`
-
-Implements the **"One Voicing Per Hand"** pedagogical philosophy:
-- **Left Hand**: Root + 5th in Octave 2 (MIDI 36+) — bass/power anchor
-- **Right Hand**: Full chord tones in Octave 4 (MIDI 60+) — harmonic clarity
-
-Finger assignments follow the standard classical 5-finger color system:
-- Thumb (1) = Red, Index (2) = Yellow, Middle (3) = Green, Ring (4) = Teal, Pinky (5) = Blue
-
-### Animation: `handAnimator.js`
-
-GSAP 3 timeline:
-1. Kill any running tweens from the previous chord
-2. Reset all fingers to white/neutral
-3. Animate active fingers: fill with pedagogical color + `y: 8` press motion
-4. Piano keys: `scaleY` pulse + brightness flash via `PianoKeyboard.pulseKey()`
-
-Respects `prefers-reduced-motion` — immediately skips to final state if set.
+### 2.5 Structural Analysis & Four-Chord Loop Detection (`backend/analysis/structure.py`, `loop_detection.py`)
+- **Self-Similarity Recurrence Matrices (SSM):** Computes cosine similarity between chroma vectors over time to identify macro sections without hallucinating artificial genre labels.
+- **Four-Chord Loop Detection:** Evaluates sliding 4-chord windows across modulo-12 transposition deltas, rejecting non-progressions (e.g., $C|C|C|C$) and isolating repeated chord cycles (e.g., $F\sharp \rightarrow B\flat7 \rightarrow E\flat m \rightarrow B$) with exact timestamps.
 
 ---
 
-## API Reference
+## 3. Music Theory & Arrangement Engine (`backend/theory/`)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/analyze` | Upload audio file (multipart/form-data) |
-| `POST` | `/analyze-path` | Analyze a file by local path `{ "path": "..." }` |
-| `GET` | `/progress` | `{ "msg": "...", "pct": 0–100 }` |
-| `GET` | `/result` | Full analysis JSON (202 while processing) |
-| `GET` | `/` | Serves `frontend/index.html` |
-| Static | `/css/*`, `/js/*` | Frontend assets |
-
-### `/result` JSON Schema
-
-```json
-{
-  "ready": true,
-  "duration": 214.5,
-  "key": "C",
-  "scale": "Major",
-  "key_full": "C Major",
-  "tempo": 120.3,
-  "time_sig": "4/4",
-  "scale_notes": [0, 2, 4, 5, 7, 9, 11],
-  "chords": [
-    { "time": 0.0, "end": 1.3, "chord": "C", "raw_chord": "C", "confidence": 0.87 }
-  ],
-  "unique_chords": ["C", "Am", "F", "G"],
-  "chord_data": {
-    "C": {
-      "notes": [0, 4, 7],
-      "note_names": ["C", "E", "G"],
-      "fingers": { "0": 1, "4": 3, "7": 5 },
-      "difficulty": "easy"
-    }
-  },
-  "roman_numerals": { "C": "I", "Am": "vi", "F": "IV", "G": "V" },
-```
+- **Standardized Chord Normalization (`normalization.py`):** Normalizes MIR notation into canonical roots and qualities (Major, Minor, 7th, Maj7, Min7, Dim, Aug, Sus4).
+- **Adaptive Beginner Simplification (`simplification.py`):** Converts complex jazz/extended chords into playable root-position and standard triad shapes while preserving harmonic fidelity.
+- **Piano Voicing & Dynamic Fingering (`piano_voicing.py`):** Generates voice-led, ergonomic piano voicings for Left Hand (bass root/5th) and Right Hand (triad/inversion) with biomechanical finger assignment ($1 \dots 5$).
 
 ---
 
-## Lyrics & Transcription Reference
+## 4. Single-Workspace Desktop Frontend (`frontend/`)
 
-For full details on the decoupled lyrics pipeline, vocal separation, ASR, alignment engine, and phased roadmap, see [LYRICS_ARCHITECTURE.md](file:///Volumes/TIKDI/APP%20Development/HotChords%20App/docs/LYRICS_ARCHITECTURE.md).
+HotChords operates as a permanent single-workspace application built with zero external framework overhead (pure Vanilla ES6+ and CSS):
+
+### 4.1 Master Clock Authority (`frontend/js/audio/playbackClock.js`)
+All UI components, animations, and audio renderers subscribe to a single canonical `PlaybackClock`:
+- **State Machine:** `STOPPED`, `PLAYING`, `PAUSED`.
+- **Looping Semantics:** Seamless hardware-timed boundary wrapping (`seek(loop.start)`) when reaching `loop.end`.
+- **Zero-Drift Synchronization:** Emits requestAnimationFrame (rAF) snapshots consumed by UI components without DOM churn.
+
+### 4.2 Dual-Source Audio Architecture
+1. **Polyphonic Piano Synthesizer (`UnifiedPianoPlaybackController.js`, `PianoPlaybackService.js`):**
+   - Sample-accurate Salamander Grand Piano audio playback.
+   - Intelligent voice allocation, pitch transposition, and sustain pedal management.
+2. **Original Track Media Controller (`SongAudioController.js`):**
+   - Streams local user audio via HTML5 `<audio>` with hardware pitch preservation (`preservesPitch = true`).
+   - Mutual exclusivity: Switching between Piano Synth and Original Track cleanly mutes/pauses the inactive source without interrupting the master timeline.
+
+### 4.3 Visual Components
+- **`DynamicChordReel.js`:** 3-chord perspective reel showing previous, active, and upcoming chords with smooth CSS transforms.
+- **`PianoKeyboard.js`:** 88-key responsive SVG/Canvas keyboard highlighting active notes with hand-coded color tokens (Left Hand: Blue/Cyan, Right Hand: Amber/Gold).
+- **`HandDiagrams.js` & `WorkspaceHandController.js`:** Anatomical hand diagram rendering real-time finger placement and chord fingering numbers.
+
+---
+
+## 5. Real-Time Pitch & Practice Feedback (`frontend/js/audio/`)
+
+- **`RealtimeInputService.js`:** Captures low-latency microphone audio through Web Audio API.
+- **`RealtimePitchDetector.js`:** High-speed normalized autocorrelation (YIN-variant) with dynamic octave tolerance.
+- **`PracticeFeedbackBridge.js`:** Matches detected user notes against active chord voicings with configurable timing tolerance ($150\text{ms}$ window).
+- **`PracticeMetricsTracker.js`:** Tracks chord transition latencies, note hit rates, and cumulative session accuracy.
+
+---
+
+## 6. Testing & Quality Assurance Architecture
+
+HotChords maintains comprehensive multi-tier test suites:
+- **Python Unit & Integration (`pytest tests/`):** 195 automated tests validating signal processing, source separation, chord normalization, structure analysis, and practice engines.
+- **Client & Playback Lifecycle (`node tests/test_playback_lifecycle.js`):** Validates clock state transitions, seek reconciliation, and mutual audio renderer exclusivity.
+- **UI/UX Architecture (`npm test`):** 37 tests verifying DOM hierarchy, single-workspace rules, and styling invariants.
+- **Client Practice & Calibration (`node tests/test_phase11_client_pitch_and_feedback.js`, `test_phase12_client_metrics.js`):** Validates real-time feedback loops and calibration math.
 

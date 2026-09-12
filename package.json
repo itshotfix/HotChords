@@ -1,11 +1,10 @@
 {
   "name": "hotchords",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "HotChords — Real-time interactive piano chord learning workstation",
-
   "main": "frontend/index.html",
   "scripts": {
-    "test": "node tests/test_workspace_hands_and_timeline.js && node tests/test_phase_7c_ui_ux.js && node tests/test_phase_8_rearchitecture.js",
+    "test": "node tests/test_workspace_hands_and_timeline.js && node tests/test_phase_7c_ui_ux.js && node tests/test_phase_8_rearchitecture.js && node tests/test_playback_lifecycle.js && node tests/test_phase11_client_pitch_and_feedback.js && node tests/test_phase12_client_metrics.js",
     "validate:songs": "node scripts/validate_workspace_real_songs.js"
   },
   "keywords": [

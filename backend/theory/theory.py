@@ -60,23 +60,69 @@ def musician_friendly_name(name):
     return ENHARMONIC_MAP.get(name, name)
 
 def chord_note_indices(name):
-    if name == 'N': return []
-    if name.endswith('maj7'):
-        root = name[:-4]; ivs = [0, 4, 7, 11]
-    elif name.endswith('m7'):
-        root = name[:-2]; ivs = [0, 3, 7, 10]
-    elif name.endswith('7') and not name.endswith('maj7'):
-        root = name[:-1]; ivs = [0, 4, 7, 10]
-    elif name.endswith('m') and len(name) > 1:
-        root = name[:-1]; ivs = [0, 3, 7]
+    if not name or name == 'N': return []
+
+    # Handle slash chords (e.g., 'C/E', 'Am/G', 'F/A')
+    bass_note = None
+    clean_name = name
+    if '/' in name:
+        parts = name.split('/')
+        clean_name = parts[0]
+        bass_note = parts[1]
+
+    # Parse root and quality
+    if clean_name.endswith('maj7'):
+        root = clean_name[:-4]; ivs = [0, 4, 7, 11]
+    elif clean_name.endswith('m7b5') or clean_name.endswith('hdim7'):
+        root = clean_name.replace('m7b5', '').replace('hdim7', ''); ivs = [0, 3, 6, 10]
+    elif clean_name.endswith('dim7'):
+        root = clean_name[:-4]; ivs = [0, 3, 6, 9]
+    elif clean_name.endswith('dim'):
+        root = clean_name[:-3]; ivs = [0, 3, 6]
+    elif clean_name.endswith('aug'):
+        root = clean_name[:-3]; ivs = [0, 4, 8]
+    elif clean_name.endswith('7sus4'):
+        root = clean_name[:-5]; ivs = [0, 5, 7, 10]
+    elif clean_name.endswith('sus4'):
+        root = clean_name[:-4]; ivs = [0, 5, 7]
+    elif clean_name.endswith('sus2'):
+        root = clean_name[:-4]; ivs = [0, 2, 7]
+    elif clean_name.endswith('m7'):
+        root = clean_name[:-2]; ivs = [0, 3, 7, 10]
+    elif clean_name.endswith('m6'):
+        root = clean_name[:-2]; ivs = [0, 3, 7, 9]
+    elif clean_name.endswith('6') and not clean_name.endswith('m6'):
+        root = clean_name[:-1]; ivs = [0, 4, 7, 9]
+    elif clean_name.endswith('maj9'):
+        root = clean_name[:-4]; ivs = [0, 4, 7, 11, 2]
+    elif clean_name.endswith('m9'):
+        root = clean_name[:-2]; ivs = [0, 3, 7, 10, 2]
+    elif clean_name.endswith('9'):
+        root = clean_name[:-1]; ivs = [0, 4, 7, 10, 2]
+    elif clean_name.endswith('7') and not clean_name.endswith('maj7'):
+        root = clean_name[:-1]; ivs = [0, 4, 7, 10]
+    elif clean_name.endswith('m') and len(clean_name) > 1 and not clean_name.endswith('dim'):
+        root = clean_name[:-1]; ivs = [0, 3, 7]
     else:
-        root = name; ivs = [0, 4, 7]
-        
+        root = clean_name; ivs = [0, 4, 7]
+
     try: idx = NOTE_NAMES.index(root)
     except:
         try: idx = NOTE_FLAT.index(root)
         except: return []
-    return [(idx + i) % 12 for i in ivs]
+
+    notes = [(idx + i) % 12 for i in ivs]
+
+    if bass_note:
+        try:
+            b_idx = NOTE_NAMES.index(bass_note) if bass_note in NOTE_NAMES else NOTE_FLAT.index(bass_note)
+            if b_idx in notes:
+                notes.remove(b_idx)
+            notes.insert(0, b_idx)
+        except Exception:
+            pass
+
+    return notes
 
 def get_chord_notes_musician(name):
     idxs = chord_note_indices(name)
@@ -101,19 +147,20 @@ def chord_fingers(name):
 def chord_difficulty(name):
     """
     Rates a chord as 'easy', 'medium', or 'hard' for beginner guidance.
-
-    Heuristic:
-      - Black keys (C#/Db, D#/Eb, F#/Gb, G#/Ab, A#/Bb) are harder to play
-        because they require thumb-under or position shifts.
-      - Minor chords are slightly harder than major due to the minor 3rd span.
-      - Combining both = 'hard' (e.g. Abm, Ebm).
     """
-    if name == 'N': return 'easy'
-    root = name.replace('maj7','').replace('m7','').replace('7','').rstrip('m')
+    if not name or name == 'N': return 'easy'
+    clean = name.split('/')[0]
+    for ext in ['maj7', 'maj9', 'm7b5', 'hdim7', 'dim7', 'dim', 'aug', '7sus4', 'sus4', 'sus2', 'm7', 'm6', '6', 'm9', '9', '7']:
+        if clean.endswith(ext):
+            clean = clean[:-len(ext)]
+            break
+    root = clean.rstrip('m')
     black = {1, 3, 6, 8, 10}  # MIDI pitch class indices of black keys
     try: idx = NOTE_NAMES.index(root)
-    except: return 'medium'
-    is_min = 'm' in name and not name.endswith('maj7')
+    except:
+        try: idx = NOTE_FLAT.index(root)
+        except: return 'medium'
+    is_min = 'm' in name and not name.endswith('maj7') and not name.endswith('maj9')
     if idx in black and is_min: return 'hard'
     if idx in black: return 'medium'
     if is_min: return 'medium'
@@ -126,9 +173,15 @@ def _scale_notes(root_idx, is_minor):
 def chord_roman(chord_name, key, scale):
     ROMAN       = ['I','II','III','IV','V','VI','VII']
     ROMAN_LOWER = ['i','ii','iii','iv','v','vi','vii']
+    if not chord_name or chord_name == 'N': return ''
     try:
-        root = chord_name.replace('maj7','').replace('m7','').replace('7','').rstrip('m')
-        is_min = 'm' in chord_name and not chord_name.endswith('maj7')
+        clean = chord_name.split('/')[0]
+        for ext in ['maj7', 'maj9', 'm7b5', 'hdim7', 'dim7', 'dim', 'aug', '7sus4', 'sus4', 'sus2', 'm7', 'm6', '6', 'm9', '9', '7']:
+            if clean.endswith(ext):
+                clean = clean[:-len(ext)]
+                break
+        root = clean.rstrip('m')
+        is_min = 'm' in chord_name and not chord_name.endswith('maj7') and not chord_name.endswith('maj9')
         ki = NOTE_FLAT.index(key) if key in NOTE_FLAT else NOTE_NAMES.index(key)
         ci = NOTE_FLAT.index(root) if root in NOTE_FLAT else NOTE_NAMES.index(root)
         sc = MINOR_INTERVALS if scale == 'Minor' else MAJOR_INTERVALS
@@ -175,7 +228,7 @@ def get_pitch_class(note_name):
         root = note_name[:2]
     else:
         root = note_name[:1]
-        
+
     if root in NOTE_NAMES:
         return NOTE_NAMES.index(root)
     if root in NOTE_FLAT:
@@ -191,7 +244,7 @@ def transpose_chord(chord_name, semitones):
     else:
         root = chord_name[:1]
         suffix = chord_name[1:]
-        
+
     try:
         p = NOTE_FLAT.index(root)
         use_flats = True
@@ -201,7 +254,7 @@ def transpose_chord(chord_name, semitones):
             use_flats = False
         except ValueError:
             return chord_name
-            
+
     new_p = (p + semitones) % 12
     new_root = NOTE_FLAT[new_p] if use_flats else NOTE_NAMES[new_p]
     return musician_friendly_name(new_root + suffix)
@@ -215,10 +268,10 @@ def simplify_progression(chords, key, scale):
     """
     if not chords:
         return [], key, scale, 0
-        
+
     is_minor = (scale == 'Minor')
     key_root = get_pitch_class(key)
-    
+
     # 1. First Pass: Simplify individual chords and do diatonic mapping
     simplified_raw = []
     for c in chords:
@@ -228,7 +281,7 @@ def simplify_progression(chords, key, scale):
         else:
             # Triad collapse
             simplified_name = simplify_chord(chord_name)
-            
+
             # Diminished chord replacement
             if 'dim' in chord_name or '°' in chord_name or 'm7b5' in chord_name:
                 c_root = get_pitch_class(chord_name)
@@ -247,14 +300,14 @@ def simplify_progression(chords, key, scale):
                             simplified_name = musician_friendly_name(NOTE_NAMES[(key_root + 7) % 12])
                         else:
                             simplified_name = musician_friendly_name(NOTE_NAMES[c_root] + 'm')
-                            
+
         simplified_raw.append({
             'time': c['time'],
             'end': c['end'],
             'chord': simplified_name,
             'confidence': c['confidence']
         })
-        
+
     # 2. Second Pass: Merge consecutive identical chords
     merged = []
     for c in simplified_raw:
@@ -267,7 +320,7 @@ def simplify_progression(chords, key, scale):
                 last['confidence'] = max(last['confidence'], c['confidence'])
             else:
                 merged.append(c.copy())
-                
+
     # 3. Third Pass: Eliminate short chords (duration < 1.5s) to reduce pacing pressure
     min_dur = 1.5
     smoothed = []
@@ -275,7 +328,7 @@ def simplify_progression(chords, key, scale):
     while i < len(merged):
         c = merged[i]
         dur = c['end'] - c['time']
-        
+
         if dur < min_dur:
             if not smoothed:
                 if i + 1 < len(merged):
@@ -287,7 +340,7 @@ def simplify_progression(chords, key, scale):
             else:
                 prev_c = smoothed[-1]
                 next_c = merged[i+1]
-                
+
                 if prev_c['chord'] == 'N' and next_c['chord'] != 'N':
                     next_c['time'] = c['time']
                 elif next_c['chord'] == 'N' and prev_c['chord'] != 'N':
@@ -310,27 +363,27 @@ def simplify_progression(chords, key, scale):
                 last['end'] = c['end']
             else:
                 final_chords.append(c)
-                
+
     # 4. Transposition analysis
     transpose_offset = 0
     easy_key_name = key
     easy_scale = scale
-    
+
     if key_root is not None:
         targets = EASY_MINOR_KEYS if is_minor else EASY_MAJOR_KEYS
         current_in_easy = False
-        
+
         for name, pc, acc in targets:
             clean_key_name = key.replace('m', '')
             clean_target_name = name.replace('m', '')
             if get_pitch_class(clean_key_name) == pc:
                 current_in_easy = True
                 break
-                
+
         if not current_in_easy:
             best_dist = 99
             best_target_name = None
-            
+
             for name, pc, acc in targets:
                 dist = (pc - key_root) % 12
                 if dist > 5:
@@ -338,11 +391,11 @@ def simplify_progression(chords, key, scale):
                 if abs(dist) < abs(best_dist):
                     best_dist = dist
                     best_target_name = name
-                    
+
             if best_target_name:
                 transpose_offset = best_dist
                 easy_key_name = best_target_name
-                
+
     # Generate transposed beginner chords if offset != 0
     beginner_chords = []
     for c in final_chords:
@@ -350,5 +403,5 @@ def simplify_progression(chords, key, scale):
         if transpose_offset != 0:
             new_c['chord'] = transpose_chord(c['chord'], transpose_offset)
         beginner_chords.append(new_c)
-        
+
     return beginner_chords, easy_key_name, transpose_offset

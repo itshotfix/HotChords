@@ -42,6 +42,14 @@ class AnalysisResult(BaseModel):
     easy_key: Optional[str] = None
     easy_key_full: Optional[str] = None
     transpose_offset: Optional[int] = 0
+    # Phase 1 Audio Intelligence Foundation
+    status: Optional[str] = None
+    status_message: Optional[str] = None
+    audio_profile: Optional[Dict[str, Any]] = None
+    timing: Optional[Dict[str, Any]] = None
+    reliability: Optional[Dict[str, Any]] = None
+    candidate_evidence: Optional[Dict[str, Any]] = None
+    instruments: Optional[Dict[str, Any]] = None
 
 class AnalysisResponse(BaseModel):
     ready: bool
