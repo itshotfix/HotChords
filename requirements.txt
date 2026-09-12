@@ -13,7 +13,7 @@ demucs>=4.0.0
 
 # Deep Chord Recognition
 lv-chordia>=1.1.0
-audioop-lts>=0.2.2
+audioop-lts>=0.2.2; python_version >= "3.13"
 
 # FFmpeg (bundled binary — no manual install required)
 imageio-ffmpeg>=0.4.9
