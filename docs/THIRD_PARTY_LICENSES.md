@@ -1,7 +1,7 @@
 # Third-Party Dependency and License Audit
 
 ## Overview
-HotChords is an open-source, local-first music pedagogy and chord analysis application licensed under the **MIT License**. To ensure legal compliance, sustainability, and potential commercial distribution readiness, all third-party code libraries, models, and pretrained weights must be strictly audited and cataloged.
+HotChords is an open-source, local-first music pedagogy and chord analysis application licensed under the **MIT License**. All third-party code libraries, models, and pretrained weights are cataloged below.
 
 ---
 
@@ -36,22 +36,20 @@ HotChords is an open-source, local-first music pedagogy and chord analysis appli
   - The core harmonic pipeline operates autonomously using classical DSP (Harmonic-Percussive Source Separation via `librosa.effects.harmonic` and CQT chroma template correlation), providing complete commercial viability out-of-the-box without requiring proprietary or non-commercial model weights.
   - If HotChords is distributed commercially in the future, Demucs weights must either be substituted with commercially trained weights or downloaded directly by end users under their own personal license.
 
-### Phase 4 Structure Analysis & Four-Chord Loop Engines
+### Structure Analysis & Four-Chord Loop Engines
 - **Implementation**: `backend/analysis/structure.py` and `backend/analysis/loop_detection.py`
 - **Algorithm Foundation**: Chroma Self-Similarity Recurrence Matrices (SSM), Novelty Curve boundary peak-picking, and Transposition-Invariant Relative Root Modulo-12 Delta Cycles.
 - **Dependencies**: Built on `numpy` (BSD 3-Clause), `scipy` (BSD 3-Clause), and `librosa` (ISC License).
 - **Licensing Status**: **100% Permissive (MIT / BSD / ISC)**. No neural network checkpoints or restricted datasets are required. Fully compliant with open-source and commercial distribution.
 
-### Phase 11 Real-Time DSP Pitch Detection & Practice Feedback Engine
+### Real-Time DSP Pitch Detection & Practice Feedback Engine
 - **Implementation**: `backend/analysis/realtime_pitch.py`, `backend/theory/practice_feedback.py`, `frontend/js/audio/realtimePitchDetector.js`, `frontend/js/audio/realtimeInputService.js`, `frontend/js/audio/practiceFeedbackBridge.js`.
 - **Algorithm Foundation**: Real-time spectral peak interpolation, harmonic comb salience scoring, Wiener entropy inharmonic noise gating, and integer overtone cancellation ($2f_0, 3f_0, 4f_0, 5f_0$).
 - **Dependencies**: Pure native Web Audio API (client-side) and `numpy` / `scipy` (BSD 3-Clause). Zero external cloud transcription APIs, zero neural network checkpoints, zero commercial/GPL dependencies.
 - **Licensing Status**: **100% Permissive (MIT / BSD)**. Fully compliant with local-first, offline open-source and commercial distribution.
 
-### Phase 12 Input Calibration, Signal Quality & Practice Metrics Engine
+### Input Calibration, Signal Quality & Practice Metrics Engine
 - **Implementation**: `backend/analysis/input_calibration.py`, `backend/theory/practice_metrics.py`, `frontend/js/audio/inputCalibrationService.js`, `frontend/js/audio/practiceMetricsTracker.js`.
 - **Algorithm Foundation**: Ambient noise floor estimation, dynamic noise gate derivation, Wiener entropy inharmonic gating, bounded event ring buffers ($N=50$), and deterministic chord mastery heuristics.
 - **Dependencies**: Built purely on Python standard library, `pydantic` (MIT), `numpy` / `scipy` (BSD 3-Clause), and standard Web Audio API. Zero external cloud dependencies, zero persistent audio recordings.
 - **Licensing Status**: **100% Permissive (MIT / BSD)**. Fully compliant with open-source and commercial distribution.
-
-

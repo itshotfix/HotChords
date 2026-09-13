@@ -71,7 +71,7 @@ Version: 0.4.0
 - Filename: HotChords-v0.4.0-macOS-AppleSilicon.dmg
 - Platform: macOS Apple Silicon
 - Direct Download: [HotChords v0.4.0 for macOS](https://github.com/itshotfix/HotChords/releases/download/v0.4.0/HotChords-v0.4.0-macOS-AppleSilicon.dmg)
-- SHA-256: `49d8008569c1b88b027149eeb4c5a4fc8804f650a55a2cf4adf338d6d843404f`
+- SHA-256: `e1b9437063ab6ffc2bceec2c433950c078ee477550a0e98c5921a49d019ca528`
 
 Full release:
 
@@ -141,4 +141,4 @@ HotChords processes audio locally on the user's machine. Audio is not uploaded t
 ## License
 
 HotChords is released under the [MIT License](LICENSE).
-For third-party dependency licenses and sample attributions, see [THIRD_PARTY_LICENSE_AUDIT.md](THIRD_PARTY_LICENSE_AUDIT.md).
+For third-party dependency licenses and sample attributions, see [THIRD_PARTY_LICENSES.md](docs/THIRD_PARTY_LICENSES.md).
