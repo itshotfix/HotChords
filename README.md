@@ -119,6 +119,7 @@ npm test
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Release Validation](docs/RELEASE_VALIDATION.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
 - [Changelog](CHANGELOG.md)

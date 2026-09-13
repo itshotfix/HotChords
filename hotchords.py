@@ -24,14 +24,12 @@ except ImportError:
     pass
 
 if __name__ == '__main__':
-    from backend.main import PORT, open_browser
+    from backend.main import PORT, open_browser, print_ready_banner
     
-    print('\n  HotChords : http://localhost:' + str(PORT))
-    print('  Piano Chord Detection & Pedagogy Workstation')
-    print('  Keep playing... developed by HotFix\n')
+    print_ready_banner(PORT)
     
     # Start browser auto-launch thread
-    threading.Thread(target=open_browser, daemon=True).start()
+    threading.Thread(target=open_browser, args=(PORT,), daemon=True).start()
     
     # Start Uvicorn ASGI server
     uvicorn.run("backend.api.router:app", host="127.0.0.1", port=PORT, log_level="warning")

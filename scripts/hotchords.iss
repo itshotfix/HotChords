@@ -33,6 +33,10 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[Messages]
+FinishedHeadingLabel=HotChords is ready.
+FinishedLabel=Setup has finished installing [name] on your computer.%n%nWhen launched, HotChords starts its local engine and opens automatically in your default browser at:%nhttp://hotchords.localhost:<PORT>%n%nIf HotChords does not open automatically, click Finish with 'Launch HotChords' checked, or open the desktop shortcut.
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
@@ -45,3 +49,12 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if CurPageID = wpFinished then
+  begin
+    WizardForm.FinishedHeadingLabel.Caption := 'HotChords is ready.';
+  end;
+end;
