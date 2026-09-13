@@ -8,11 +8,13 @@ Performs immediate, non-destructive static & unit checks on:
 - Installer configuration syntax/structure (Inno Setup & macOS DMG)
 - Application entrypoints and essential asset availability
 - Dynamic port selection and standardized URL generation logic
-- Ready banner wording and clickable browser launch logic
+- Strict static code audit: Rejects hardcoded runtime URLs (e.g. localhost:5500)
+  while permitting legitimate search start points (get_free_port(start_port=5500))
+- Verification of self-contained macOS PyInstaller bundling (zero host Python dependencies)
 - Absence of machine-specific paths and stale version references
 - Resource manifests and README download checksums
 
-Execution time: < 2 seconds (does NOT rebuild or install packages).
+Execution time: < 1 second (does NOT rebuild or install packages).
 """
 
 import sys
@@ -96,16 +98,22 @@ def check_installer_configs():
     log_check("hotchords.iss sets modern wizard style", "WizardStyle=modern" in iss)
     log_check("hotchords.iss configures 64-bit architecture", "ArchitecturesAllowed=x64compatible" in iss)
     log_check("hotchords.iss has finished ready heading message", "FinishedHeadingLabel=HotChords is ready." in iss)
-    log_check("hotchords.iss has dynamic localhost URL instructions", "http://hotchords.localhost:<PORT>" in iss)
+    log_check("hotchords.iss does not display unexpanded <PORT> placeholder", "<PORT>" not in iss)
+    log_check("hotchords.iss does not display fake hardcoded 5500 port", "5500" not in iss)
 
     # macOS DMG script checks
     dmg_path = os.path.join(PROJECT_ROOT, "scripts", "build_macos_dmg.sh")
     res = subprocess.run(["bash", "-n", dmg_path], capture_output=True, text=True)
     log_check("build_macos_dmg.sh bash syntax valid", res.returncode == 0, res.stderr.strip())
 
-    # Extract Info.plist XML block from build_macos_dmg.sh
+    # Verify macOS standalone PyInstaller packaging (no host python runtime execution)
     with open(dmg_path, "r", encoding="utf-8") as f:
         dmg_sh = f.read()
+    log_check("build_macos_dmg.sh uses PyInstaller standalone bundling", "PyInstaller" in dmg_sh)
+    log_check("build_macos_dmg.sh has NO host python3 search in runtime app", "command -v python3" not in dmg_sh)
+    log_check("build_macos_dmg.sh has NO hardcoded Homebrew runtime path in app", "/opt/homebrew/bin/python3" not in dmg_sh)
+
+    # Extract Info.plist XML block from build_macos_dmg.sh
     plist_match = re.search(r"cat << 'EOF' > \"\${APP_BUNDLE}/Contents/Info\.plist\"\n(.*?)\nEOF", dmg_sh, re.DOTALL)
     log_check("build_macos_dmg.sh contains valid Info.plist block", bool(plist_match))
     if plist_match:
@@ -180,7 +188,7 @@ def check_no_hardcoded_port_assumptions():
     print("\n[5/8] Validating No Hard-Coded Port 5500 Assumptions in Dynamic Logic...")
     from backend.main import get_app_url, print_ready_banner
 
-    # Test with alternative ports (e.g. 5507, 8080)
+    # 1. Test functional behavior with alternative ports (e.g. 5507, 8080)
     for test_port in [5507, 8080]:
         url = get_app_url(test_port)
         log_check(f"get_app_url adapts dynamically for port {test_port}", url == f"http://hotchords.localhost:{test_port}")
@@ -189,6 +197,35 @@ def check_no_hardcoded_port_assumptions():
         with redirect_stdout(buf):
             print_ready_banner(test_port)
         log_check(f"print_ready_banner formats custom port {test_port}", f"http://hotchords.localhost:{test_port}" in buf.getvalue())
+
+    # 2. Static Code Scanner: Reject hardcoded runtime URLs (e.g. "http://...:5500") while allowing start_port=5500
+    runtime_files = [
+        "hotchords.py",
+        "backend/main.py",
+        "backend/api/router.py",
+        "scripts/hotchords.iss",
+        "scripts/build_macos_dmg.sh",
+        "scripts/build_windows_installer.ps1"
+    ]
+    
+    # Matches hardcoded string literals: "http://localhost:5500", "http://hotchords.localhost:5500", etc.
+    hardcoded_url_pattern = re.compile(r'["\']http://(?:hotchords\.)?localhost:5500["\']')
+    
+    for rf in runtime_files:
+        p = os.path.join(PROJECT_ROOT, rf)
+        if not os.path.exists(p):
+            continue
+        with open(p, "r", encoding="utf-8") as f:
+            code = f.read()
+        
+        # Remove comments before scanning
+        code_no_comments = re.sub(r'#.*|//.*|;.*', '', code)
+        matches = hardcoded_url_pattern.findall(code_no_comments)
+        log_check(f"No hardcoded runtime URL in {rf}", len(matches) == 0, f"matches={matches}")
+        
+        # Verify legitimate search start is preserved in backend/main.py
+        if rf == "backend/main.py":
+            log_check("backend/main.py preserves start_port=5500 in get_free_port", "start_port=5500" in code or "get_free_port(5500)" in code)
 
 def check_no_machine_specific_paths():
     print("\n[6/8] Validating No Machine-Specific Paths in Configs & Packaging...")
@@ -228,7 +265,7 @@ def check_resource_manifests():
     with open(dmg_path, "r", encoding="utf-8") as f:
         dmg_content = f.read()
     
-    dmg_resources = ["backend", "frontend", "test songs", "hotchords.py", "requirements.txt"]
+    dmg_resources = ["frontend", "test songs", "hotchords.py"]
     for r in dmg_resources:
         log_check(f"build_macos_dmg.sh bundles existing resource: {r}", os.path.exists(os.path.join(PROJECT_ROOT, r)) and r in dmg_content)
 

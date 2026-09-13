@@ -12,19 +12,51 @@ APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 DMG_STAGING="${DIST_DIR}/dmg_staging"
 DMG_OUTPUT="${DIST_DIR}/HotChords-v0.4.0-macOS-AppleSilicon.dmg"
 
-rm -rf "${APP_BUNDLE}" "${DMG_STAGING}" "${DMG_OUTPUT}"
-mkdir -p "${APP_BUNDLE}/Contents/MacOS"
-mkdir -p "${APP_BUNDLE}/Contents/Resources"
+# 1. Clean previous build staging
+echo "  🧹 Cleaning previous build staging..."
+rm -rf "${APP_BUNDLE}" "${DMG_STAGING}" "${DMG_OUTPUT}" "${PROJECT_ROOT}/build"
 mkdir -p "${DMG_STAGING}"
 
-echo "  📦 Copying application source and assets..."
-cp -R "${PROJECT_ROOT}/backend" "${APP_BUNDLE}/Contents/Resources/"
-cp -R "${PROJECT_ROOT}/frontend" "${APP_BUNDLE}/Contents/Resources/"
-cp -R "${PROJECT_ROOT}/test songs" "${APP_BUNDLE}/Contents/Resources/"
-cp "${PROJECT_ROOT}/hotchords.py" "${APP_BUNDLE}/Contents/Resources/"
-cp "${PROJECT_ROOT}/requirements.txt" "${APP_BUNDLE}/Contents/Resources/"
+cd "${PROJECT_ROOT}"
 
-echo "  ⚙️ Creating Info.plist..."
+# 2. Determine Python interpreter for build machine execution
+PYTHON_BIN="python3"
+if [ -f "${PROJECT_ROOT}/venv/bin/python3" ]; then
+    PYTHON_BIN="${PROJECT_ROOT}/venv/bin/python3"
+fi
+
+# 3. Bundle standalone application with PyInstaller
+echo "  📦 Bundling self-contained standalone application with PyInstaller..."
+"${PYTHON_BIN}" -m PyInstaller \
+    --noconfirm \
+    --onedir \
+    --windowed \
+    --name "${APP_NAME}" \
+    --osx-bundle-identifier "com.hotfix.hotchords" \
+    --add-data "frontend:frontend" \
+    --add-data "test songs:test songs" \
+    --hidden-import "uvicorn.logging" \
+    --hidden-import "uvicorn.loops" \
+    --hidden-import "uvicorn.loops.auto" \
+    --hidden-import "uvicorn.protocols" \
+    --hidden-import "uvicorn.protocols.http" \
+    --hidden-import "uvicorn.protocols.http.auto" \
+    --hidden-import "uvicorn.lifespan" \
+    --hidden-import "uvicorn.lifespan.on" \
+    --hidden-import "soundfile" \
+    --hidden-import "imageio_ffmpeg" \
+    --hidden-import "scipy.special.cython_special" \
+    --collect-all "librosa" \
+    --collect-all "imageio_ffmpeg" \
+    "hotchords.py"
+
+if [ ! -d "${APP_BUNDLE}" ]; then
+    echo "❌ Error: PyInstaller failed to produce ${APP_BUNDLE}"
+    exit 1
+fi
+
+# 4. Finalize Info.plist metadata and bundle resources
+echo "  ⚙️ Customizing Info.plist..."
 cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -52,28 +84,19 @@ cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
 </plist>
 EOF
 
-echo "  🚀 Creating launcher executable..."
-cat << 'EOF' > "${APP_BUNDLE}/Contents/MacOS/HotChords"
-#!/usr/bin/env bash
-RESOURCE_DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
-cd "${RESOURCE_DIR}"
+# 5. Code sign final application bundle (Ad-hoc signature)
+echo "  🔏 Code signing finalized application bundle..."
+codesign --force --deep -s - "${APP_BUNDLE}"
 
-# Find Python 3
-if command -v python3 >/dev/null 2>&1; then
-    PYTHON_BIN="python3"
-elif [ -f "/opt/homebrew/bin/python3" ]; then
-    PYTHON_BIN="/opt/homebrew/bin/python3"
-elif [ -f "/usr/local/bin/python3" ]; then
-    PYTHON_BIN="/usr/local/bin/python3"
-else
-    PYTHON_BIN="python"
-fi
+# 6. Verify signature integrity
+echo "  🔍 Verifying code signature integrity..."
+codesign --verify --deep --strict --verbose=2 "${APP_BUNDLE}"
 
-exec "${PYTHON_BIN}" hotchords.py
-EOF
+# 7. Assessment with spctl
+echo "  🛡️ Checking Gatekeeper assessment..."
+spctl --assess --type execute --verbose=2 "${APP_BUNDLE}" || true
 
-chmod +x "${APP_BUNDLE}/Contents/MacOS/HotChords"
-
+# 8. Create compressed DMG
 echo "  💿 Preparing DMG staging layout..."
 cp -R "${APP_BUNDLE}" "${DMG_STAGING}/"
 ln -s /Applications "${DMG_STAGING}/Applications"
@@ -85,6 +108,6 @@ rm -rf "${DMG_STAGING}"
 
 echo ""
 echo "═════════════════════════════════════════════════════════════"
-echo "  ✅ macOS DMG Installer Successfully Built at:"
+echo "  ✅ Standalone macOS DMG Installer Successfully Built at:"
 echo "     ${DMG_OUTPUT}"
 echo "═════════════════════════════════════════════════════════════"

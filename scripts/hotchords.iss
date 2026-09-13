@@ -35,7 +35,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Messages]
 FinishedHeadingLabel=HotChords is ready.
-FinishedLabel=Setup has finished installing [name] on your computer.%n%nWhen launched, HotChords starts its local engine and opens automatically in your default browser at:%nhttp://hotchords.localhost:<PORT>%n%nIf HotChords does not open automatically, click Finish with 'Launch HotChords' checked, or open the desktop shortcut.
+FinishedLabel=Setup has finished installing [name] on your computer.%n%nHotChords will open automatically in your browser.%n%nIf it does not open automatically, launch HotChords from the Start Menu / Desktop shortcut.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
