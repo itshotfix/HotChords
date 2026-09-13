@@ -65,6 +65,7 @@ Version: 0.4.0
 - Filename: HotChords-v0.4.0-Windows-x64-Setup.exe
 - Platform: Windows 10 & 11 (x64)
 - Direct Download: [HotChords v0.4.0 for Windows](https://github.com/itshotfix/HotChords/releases/download/v0.4.0/HotChords-v0.4.0-Windows-x64-Setup.exe)
+- SHA-256: `143234f6ed96194fb5a356a9f021e30fe58aaf4c732e49a609857d6c43422beb`
 
 ### macOS Installer
 - Filename: HotChords-v0.4.0-macOS-AppleSilicon.dmg
