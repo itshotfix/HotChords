@@ -73,7 +73,16 @@ class TimingAnalyzer:
                     sr=self.sr,
                     hop_length=self.hop_length
                 )
-                self._tempo = float(tempo_arr[0]) if hasattr(tempo_arr, '__len__') else float(tempo_arr)
+                raw_tempo = float(tempo_arr[0]) if hasattr(tempo_arr, '__len__') else float(tempo_arr)
+                resolved_tempo = self._resolve_tempo_octave(onset_env, raw_tempo)
+                self._tempo = resolved_tempo
+                if abs(resolved_tempo - raw_tempo) > 1.0:
+                    _, beat_frames = librosa.beat.beat_track(
+                        onset_envelope=onset_env,
+                        sr=self.sr,
+                        hop_length=self.hop_length,
+                        bpm=resolved_tempo
+                    )
             else:
                 _, beat_frames = librosa.beat.beat_track(
                     onset_envelope=onset_env,
@@ -114,6 +123,59 @@ class TimingAnalyzer:
 
         self._is_analyzed = True
         return self
+
+    def _resolve_tempo_octave(self, onset_env: np.ndarray, raw_tempo: float) -> float:
+        """
+        Resolve half-time / double-time metrical octave ambiguity on raw beat_track tempo.
+
+        Evaluates candidate tempos {T, T/2, 2*T} within [45, 200] BPM using normalized
+        onset-envelope autocorrelation at 1-beat and 2-beat lags combined with a
+        perceptual tempo prior centered around ~100 BPM.
+        """
+        if raw_tempo <= 0.0 or len(onset_env) < 32:
+            return raw_tempo
+
+        env = np.asarray(onset_env, dtype=float)
+        env = env - np.mean(env)
+        denom = float(np.dot(env, env))
+        if denom <= 1e-9:
+            return raw_tempo
+
+        fps = float(self.sr) / float(self.hop_length)
+
+        def _lag_corr(lag_frames: float) -> float:
+            center = int(round(lag_frames))
+            if center < 2 or center >= len(env) - 2:
+                return 0.0
+            best = 0.0
+            for lag in (center - 1, center, center + 1):
+                if 1 <= lag < len(env):
+                    c = float(np.dot(env[:-lag], env[lag:])) / denom
+                    if c > best:
+                        best = c
+            return max(0.0, best)
+
+        candidates = [raw_tempo]
+        if raw_tempo * 0.5 >= 48.0:
+            candidates.append(raw_tempo * 0.5)
+        if raw_tempo * 2.0 <= 195.0:
+            candidates.append(raw_tempo * 2.0)
+
+        best_bpm = raw_tempo
+        best_score = -1.0
+        for bpm in candidates:
+            period = (60.0 / bpm) * fps
+            ac1 = _lag_corr(period)
+            ac2 = _lag_corr(2.0 * period)
+            # Gentle perceptual prior peaking at 100 BPM (sigma ~0.55 octaves)
+            prior = float(np.exp(-0.5 * ((np.log2(bpm / 100.0)) / 0.55) ** 2))
+            pulse = 0.65 * ac1 + 0.35 * ac2
+            score = pulse * (0.45 + 0.55 * prior)
+            if score > best_score:
+                best_score = score
+                best_bpm = bpm
+
+        return float(best_bpm)
 
     def _estimate_downbeats(self, onset_env: np.ndarray) -> None:
         """

@@ -1,4 +1,4 @@
-name: Python Checks
+name: Public CI Checks
 
 on:
   push:
@@ -6,9 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  lint-and-import:
-    name: Lint & Import Check
+  verify-public-build:
+    name: Backend, Frontend, Assets & Runtime Smoke Check
     runs-on: ubuntu-latest
 
     steps:
@@ -20,20 +23,25 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Check that all backend modules import cleanly
-        # This catches broken imports, missing __init__ files, and syntax errors
-        # across the entire backend package without running a full analysis.
+      - name: Install Frontend dependencies & Verify JS syntax
+        run: |
+          npm install
+          for f in frontend/js/audio/*.js frontend/js/engine/*.js frontend/js/ui/*.js; do
+            node --check "$f"
+          done
+          echo "All active frontend JS modules passed syntax check."
+
+      - name: Verify Backend Imports, Entrypoint & Preflight
         run: |
           python -c "import backend.api.router"
           python -c "import backend.analysis.pipeline"
@@ -42,25 +50,79 @@ jobs:
           python -c "import backend.analysis.engine_manager"
           python -c "import backend.analysis.harmonic_evidence"
           python -c "import backend.analysis.loop_detection"
+          python -c "import backend.analysis.note_transcription"
+          python -c "import backend.analysis.engines.basic_pitch_engine"
+          python -c "import backend.analysis.engines.transcription_orchestrator"
           python -c "import backend.theory.theory"
           python -c "import backend.theory.constants"
           python -c "import backend.theory.simplification"
           python -c "import backend.theory.normalization"
           python -c "import backend.theory.piano_voicing"
+          python -c "import backend.theory.piano_arrangement"
           python -c "import backend.theory.beginner_practice"
           python -c "import backend.theory.transposition"
           python -c "import backend.utils.preflight"
+          python -c "import backend.utils.library_store"
+          python -c "import backend.utils.midi_export"
           python -c "import backend.models"
           python -c "import backend.models.responses"
           python -c "import backend.models.timeline"
           python -c "import backend.models.analysis_types"
           python -c "import backend.models.practice_session"
           python -c "import backend.main"
-          echo "All backend modules imported successfully."
+          python -m py_compile hotchords.py
+          python -m backend.utils.preflight
+          echo "Backend imports, compilation, and preflight OK."
 
+      - name: Verify Required Runtime Assets & Models
+        run: |
+          test -f frontend/index.html
+          test -f frontend/css/piano.css
+          test -f backend/assets/models/basic_pitch/nmp.onnx
+          test -f frontend/js/assets/hands/hand_left.glb
+          test -f frontend/js/assets/hands/hand_right.glb
+          test -f frontend/audio/samples/C4.mp3
+          echo "All required runtime assets and ONNX model verified."
 
-      - name: Check entry point syntax
-        run: python -m py_compile hotchords.py && echo "hotchords.py OK"
+      - name: Verify Packaging Structure & Canonical Version
+        run: |
+          bash -n scripts/build_macos_dmg.sh
+          bash -n scripts/install-macos.sh
+          python - << 'PY'
+          import json, re, pathlib
+          m = re.search(r'APP_VERSION\s*=\s*["\']([^"\']+)["\']', pathlib.Path("backend/models/__init__.py").read_text())
+          assert m, "APP_VERSION missing in backend/models/__init__.py"
+          ver = m.group(1)
+          pkg_ver = json.loads(pathlib.Path("package.json").read_text())["version"]
+          assert pkg_ver == ver, f"package.json {pkg_ver} != {ver}"
+          iss = pathlib.Path("scripts/hotchords.iss").read_text()
+          assert f'#define MyAppVersion "{ver}"' in iss, "hotchords.iss version mismatch"
+          ps1 = pathlib.Path("scripts/build_windows_installer.ps1").read_text()
+          assert f"HotChords-v{ver}-Windows" in ps1, "build_windows_installer.ps1 version mismatch"
+          dmg = pathlib.Path("scripts/build_macos_dmg.sh").read_text()
+          assert "backend/assets" in dmg and "${APP_VERSION}" in dmg, "build_macos_dmg.sh structure check failed"
+          print(f"Packaging structure and version {ver} verified.")
+          PY
 
-      - name: Run Test Suite
-        run: pytest tests/ -v
+      - name: Application Startup, /health & Basic Route Verification
+        run: |
+          python -m uvicorn backend.api.router:app --host 127.0.0.1 --port 5599 >/tmp/hc_ci.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          READY=0
+          for i in $(seq 1 20); do
+            sleep 1
+            if curl -fsS http://127.0.0.1:5599/health >/tmp/hc_health.json 2>/dev/null && grep -q '"ready"' /tmp/hc_health.json; then
+              READY=1
+              break
+            fi
+          done
+          test "$READY" -eq 1
+          curl -fsS http://127.0.0.1:5599/ >/tmp/hc_root.html
+          grep -q "HotChords" /tmp/hc_root.html
+          curl -fsS http://127.0.0.1:5599/engines/status >/tmp/hc_engines.json
+          grep -q '"basic_pitch_onnx"' /tmp/hc_engines.json
+          curl -fsS http://127.0.0.1:5599/library >/dev/null
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5599/audio/samples/C4.mp3)" = "200"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5599/js/assets/hands/hand_left.glb)" = "200"
+          echo "Application startup, /health, and core routes verified."

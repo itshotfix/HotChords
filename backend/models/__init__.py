@@ -13,6 +13,7 @@ from .responses import (
 from .timeline import (
     HandVoicingNote,
     HandVoicing,
+    NoteEvent,
     ChordEvent,
     SectionEvent,
     NotationData,
@@ -47,7 +48,7 @@ from .practice_session import (
     set_practice_transposition,
 )
 
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.0"
 
 __all__ = [
     "APP_VERSION",

@@ -1,8 +1,8 @@
-; Inno Setup Script for HotChords v0.4.0
+; Inno Setup Script for HotChords v0.5.0
 ; Targets: Windows 10 & 11 (64-bit x86-64)
 
 #define MyAppName "HotChords"
-#define MyAppVersion "0.4.0"
+#define MyAppVersion "0.5.0"
 #define MyAppPublisher "HotFix"
 #define MyAppURL "https://github.com/itshotfix/HotChords"
 #define MyAppExeName "HotChords.exe"

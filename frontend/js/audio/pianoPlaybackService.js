@@ -272,15 +272,21 @@
             src.buffer = buf;
             src.playbackRate.setValueAtTime(playbackRate, startTime);
 
+            const peakGain = Math.max(0.02, Math.min(0.95, velocity * 0.85));
+            const releaseSec = this.sustain ? 0.45 : 0.26;
+            const releaseStart = startTime + Math.max(0.04, duration);
+            const stopTime = releaseStart + releaseSec + 0.02;
+
             const gain = this.audioCtx.createGain();
-            gain.gain.setValueAtTime(velocity * 0.8, startTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+            gain.gain.setValueAtTime(0.001, startTime);
+            gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.008);
+            gain.gain.setValueAtTime(peakGain * 0.85, releaseStart);
+            gain.gain.exponentialRampToValueAtTime(0.0008, releaseStart + releaseSec);
 
             src.connect(gain);
             gain.connect(this.audioCtx.destination);
-
             src.start(startTime);
-            src.stop(startTime + duration + 0.05);
+            src.stop(stopTime);
 
             this.activeNodes.push({ src, gain });
         }

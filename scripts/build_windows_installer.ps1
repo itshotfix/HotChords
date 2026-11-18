@@ -1,5 +1,5 @@
 # ==============================================================================
-# HotChords v0.4.0 Windows Installer Build Script
+# HotChords v0.5.0 Windows Installer Build Script
 # Targets: Windows 10 & 11 (x64)
 # ==============================================================================
 
@@ -11,13 +11,13 @@ param (
 $ErrorActionPreference = "Stop"
 
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "  Building HotChords v0.4.0 Standalone Windows Installer       " -ForegroundColor Cyan
+Write-Host "  Building HotChords v0.5.0 Standalone Windows Installer       " -ForegroundColor Cyan
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Resolve-Path (Join-Path $ScriptDir "..")
 $DistDir = Join-Path $ProjectRoot "dist"
-$InstallerOutput = Join-Path $DistDir "HotChords-v0.4.0-Windows-x64-Setup.exe"
+$InstallerOutput = Join-Path $DistDir "HotChords-v0.5.0-Windows-x64-Setup.exe"
 
 Set-Location $ProjectRoot
 
@@ -49,6 +49,7 @@ Write-Host "`n[4/5] Bundling application with PyInstaller..." -ForegroundColor Y
     --windowed `
     --name "HotChords" `
     --add-data "frontend;frontend" `
+    --add-data "backend/assets;backend/assets" `
     --hidden-import "uvicorn.logging" `
     --hidden-import "uvicorn.loops" `
     --hidden-import "uvicorn.loops.auto" `

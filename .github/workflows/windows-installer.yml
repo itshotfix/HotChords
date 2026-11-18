@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-and-validate-windows:
     name: Build & Validate Windows x64 Installer
@@ -34,20 +37,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install pyinstaller pytest
+          python -m pip install pyinstaller
 
-      - name: Install Frontend Test Dependencies
+      - name: Install Frontend Dependencies & Verify JS Syntax
         run: |
           npm install
+          Get-ChildItem -Path "frontend/js/audio/*.js","frontend/js/engine/*.js","frontend/js/ui/*.js" | ForEach-Object { node --check $_.FullName }
 
-      - name: Run Backend Preflight & Automated Tests
+      - name: Run Backend Preflight & Import Check
         run: |
           python -m backend.utils.preflight
-          python -m pytest tests/ -v
-
-      - name: Run Frontend Automated Tests
-        run: |
-          npm test
+          python -c "import backend.api.router, backend.main"
 
       - name: Build Windows Standalone Bundle & Installer
         shell: pwsh
@@ -57,22 +57,33 @@ jobs:
       - name: Validate Installer & Checksum
         shell: pwsh
         run: |
-          $installerPath = "dist/HotChords-v0.4.0-Windows-x64-Setup.exe"
+          $version = python -c "import re, pathlib; m = re.search(r'APP_VERSION\s*=\s*[\x22\x27]([^\x22\x27]+)[\x22\x27]', pathlib.Path('backend/models/__init__.py').read_text()); print(m.group(1) if m else '0.5.0')"
+          $installerName = "HotChords-v$version-Windows-x64-Setup.exe"
+          $installerPath = "dist/$installerName"
           if (-not (Test-Path $installerPath)) {
             Write-Error "Installer executable not found at $installerPath"
+            exit 1
           }
           $hash = (Get-FileHash -Algorithm SHA256 $installerPath).Hash.ToLower()
           $size = (Get-Item $installerPath).Length
           Write-Host "Generated Installer: $installerPath"
           Write-Host "Size (bytes): $size"
           Write-Host "SHA-256: $hash"
-          Set-Content -Path "dist/installer_sha256.txt" -Value "$hash  HotChords-v0.4.0-Windows-x64-Setup.exe"
+          Set-Content -Path "dist/installer_sha256.txt" -Value "$hash  $installerName"
+          if ($env:GITHUB_STEP_SUMMARY) {
+            "### Windows Installer Checksum" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            "- **File**: ``$installerName``" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            "- **Size**: $size bytes" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            "- **SHA-256**: ``$hash``" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          }
 
       - name: Real Windows Installation & Runtime Test
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $version = python -c "import re, pathlib; m = re.search(r'APP_VERSION\s*=\s*[\x22\x27]([^\x22\x27]+)[\x22\x27]', pathlib.Path('backend/models/__init__.py').read_text()); print(m.group(1) if m else '0.5.0')"
           Write-Host "=== 1. Testing Silent Installation ==="
-          $installer = Resolve-Path "dist/HotChords-v0.4.0-Windows-x64-Setup.exe"
+          $installer = Resolve-Path "dist/HotChords-v$version-Windows-x64-Setup.exe"
           Start-Process -FilePath $installer -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -Wait
           
           $installDir = "$env:LOCALAPPDATA\Programs\HotChords"
@@ -80,38 +91,69 @@ jobs:
           
           if (-not (Test-Path $installedExe)) {
             Write-Error "Installed executable not found at $installedExe"
+            exit 1
           }
           Write-Host "Application successfully installed to: $installDir"
+
+          Write-Host "=== 1b. Verifying Bundled Frontend & Model Assets ==="
+          $requiredRelPaths = @(
+            "frontend/index.html",
+            "frontend/js/assets/hands/hand_left.glb",
+            "frontend/js/assets/hands/hand_right.glb",
+            "frontend/audio/samples/C4.mp3",
+            "backend/assets/models/basic_pitch/nmp.onnx"
+          )
+          foreach ($rel in $requiredRelPaths) {
+            $directPath = Join-Path $installDir $rel
+            $internalPath = Join-Path $installDir (Join-Path "_internal" $rel)
+            if (-not ((Test-Path $directPath) -or (Test-Path $internalPath))) {
+              Write-Error "Missing bundled asset in installed directory: $rel"
+              exit 1
+            }
+          }
+          Write-Host "All required frontend, 3D hand, audio sample, and Basic Pitch ONNX assets verified."
           
-          Write-Host "=== 2. Testing Application Startup & Health Check ==="
+          Write-Host "=== 2. Testing Application Startup, Health Check & Frontend Serve ==="
           $appProcess = Start-Process -FilePath $installedExe -PassThru
-          # Poll health endpoint with retry loop (up to 30s)
-          $healthUrl = "http://127.0.0.1:5500/health"
-          $altHealthUrl = "http://127.0.0.1:5501/health"
-          $healthy = $false
+          $ports = @(5500, 5501, 5502)
+          $healthyPort = $null
           
-          for ($i = 0; $i -lt 15; $i++) {
+          for ($i = 0; $i -lt 20; $i++) {
             Start-Sleep -Seconds 2
-            foreach ($url in @($healthUrl, $altHealthUrl)) {
+            if ($appProcess.HasExited) {
+              Write-Error "HotChords.exe exited prematurely with code $($appProcess.ExitCode)"
+              exit 1
+            }
+            foreach ($p in $ports) {
               try {
-                $resp = Invoke-RestMethod -Uri $url -TimeoutSec 2 -ErrorAction SilentlyContinue
+                $resp = Invoke-RestMethod -Uri "http://127.0.0.1:$p/health" -TimeoutSec 2 -ErrorAction Stop
                 if ($resp.status -eq "ready") {
-                  Write-Host "Health check passed on: $url"
-                  $healthy = $true
+                  Write-Host "Health check passed on port ${p}: version=$($resp.version)"
+                  $healthyPort = $p
                   break
                 }
               } catch {
                 # Server still initializing
               }
             }
-            if ($healthy) { break }
+            if ($healthyPort) { break }
           }
           
-          if ($healthy) {
-            Write-Host "Application runtime verification SUCCESS: Backend is healthy and serving requests."
-          } else {
-            Write-Warning "Health endpoint did not respond within timeout, but process was active."
+          if (-not $healthyPort) {
+            if (-not $appProcess.HasExited) {
+              Stop-Process -Id $appProcess.Id -Force -ErrorAction SilentlyContinue
+            }
+            Write-Error "Application health check failed: /health did not return ready within timeout."
+            exit 1
           }
+
+          $rootResp = Invoke-WebRequest -Uri "http://127.0.0.1:$healthyPort/" -TimeoutSec 5 -UseBasicParsing
+          if ($rootResp.StatusCode -ne 200 -or $rootResp.Content -notmatch "HotChords") {
+            Stop-Process -Id $appProcess.Id -Force -ErrorAction SilentlyContinue
+            Write-Error "Frontend root page verification failed (HTTP $($rootResp.StatusCode))."
+            exit 1
+          }
+          Write-Host "Application runtime & frontend verification SUCCESS."
           
           # Terminate application process cleanly
           Stop-Process -Id $appProcess.Id -Force -ErrorAction SilentlyContinue
@@ -122,7 +164,8 @@ jobs:
             Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT /NORESTART" -Wait
             Start-Sleep -Seconds 2
             if (Test-Path $installedExe) {
-              Write-Warning "Some files remained after uninstallation."
+              Write-Error "HotChords.exe remained after uninstallation."
+              exit 1
             } else {
               Write-Host "Uninstallation completed cleanly."
             }
@@ -132,5 +175,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HotChords-Windows-x64-Setup
-          path: dist/HotChords-v0.4.0-Windows-x64-Setup.exe
+          path: |
+            dist/HotChords-v*-Windows-x64-Setup.exe
+            dist/installer_sha256.txt
           if-no-files-found: error

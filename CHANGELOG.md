@@ -6,6 +6,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v0.5.0] — Piano Studio 3D, UI Restyle & Transcription Hardening (2026-11-18)
+
+### Added
+- **3D Piano Studio & Multi-View Workstation:** Interactive Three.js 88-key piano with falling note highway, **Performer**, **Overhead**, and **Close-up** camera presets, **2D Roll** view, **Grand Staff Sheet Music** (`Sheet`), **Diatonic Chord Chart** drawer, and **Learn Mode** microphone feedback.
+- **Physical 3D Piano Branding:** Added champagne-gold **HotFix** SVG wordmark attached to the left horizontal top-facing piano fascia (`pianoBody -> frontFascia -> hotFixLogoGroup -> logoMesh`).
+- **3D Hand Models:** Integrated left and right 3D hand models (`hand_left.glb`, `hand_right.glb`) tracking active keyboard regions.
+- **Basic Pitch ONNX Note Transcription:** Bundled `nmp.onnx` neural note transcription with sustained-note preservation, same-pitch re-strike protection, and +12/+24 harmonic ghost suppression.
+- **Song Library Management:** Search, filter pills, folder organization, renaming, and on-demand vocal/backing stem downloads for up to 10 saved arrangements.
+- **Optional One-Command Installers:** Added optional `scripts/install-macos.sh` and `scripts/install-windows.ps1` with SHA-256 checksum verification.
+- **macOS DMG CI Workflow:** Added `.github/workflows/macos-installer.yml` with asset verification, DMG mount + `/health` & `/` runtime checks, and SHA-256 reporting.
+
+### Improved
+- **Workstation UI Restyle:** Updated `frontend/css/piano.css` to a dark charcoal (`#111111` / `#202020` / `#262626` / `#2C2C2C`) and orange (`#FF5A1F` / `#FF7138`) palette while preserving musical hand/note colour semantics.
+- **Canonical Versioning:** Synchronized `0.5.0` across `backend/models/__init__.py`, `package.json`, `scripts/hotchords.iss`, `scripts/build_macos_dmg.sh`, `scripts/build_windows_installer.ps1`, and GitHub workflows.
+- **CI Coverage:** Updated `.github/workflows/ci.yml` to run both backend `pytest` and frontend `npm test` suites, and set `permissions: contents: read` across workflows.
+
+### Fixed
+- **3D Chord Label Placement:** Restricted `_chordSprites` to the falling-note highway behind the piano fascia (`z <= -0.164`) with `depthTest: true` and `0.45s` de-overlapping so chord labels never render over the piano fascia or `HotFix` logo.
+- **Packaging Asset Bundling:** Updated Windows and macOS PyInstaller scripts to bundle `backend/assets` (including `nmp.onnx`) alongside `frontend` assets, and hardened `.github/workflows/windows-installer.yml` to fail on `/health` or `/` errors.
+
+### Platform and installation
+- **macOS (Apple Silicon):** Standalone `.dmg` (`HotChords-v0.5.0-macOS-AppleSilicon.dmg`) built and verified locally on Apple Silicon; ad-hoc signed (`codesign -s -`), not Apple notarized.
+- **Windows (x64):** Installer workflow updated; Windows `v0.5.0` binary build and verification remain pending execution on the GitHub Actions `windows-latest` runner.
+
+### Known limitations
+- Finger-by-finger 3D hand articulation remains limited compared to full biomechanical performance.
+- Transcription and chord accuracy depend on audio mix complexity and require human-annotated validation.
+- Optional `roformer` separation requires installing `audio-separator` separately.
+
+---
+
 ## [v0.4.0] — Harmonic Intelligence, Four-Chord Loop & Real-Time Practice (2026-09-12)
 
 ### Added

@@ -47,20 +47,19 @@ python hotchords.py
 ```
 HotChords/
 ├── backend/
-│   ├── analysis/       # Audio QC, harmonic routing, MIR chord engines, loop detection
-│   ├── theory/         # Normalization, beginner simplification, piano voicing & fingering
+│   ├── analysis/       # Audio QC, harmonic routing, MIR chord & note engines, loop detection
+│   ├── theory/         # Normalization, beginner simplification, piano voicing, fingering & arrangement
 │   ├── models/         # Pydantic data contracts and timeline response schemas
 │   ├── api/            # FastAPI endpoints and background analysis worker
-│   └── benchmarks/     # Audio profiling and evaluation benchmarks
+│   └── utils/          # Local library store, MIDI export, preflight checks
 ├── frontend/
 │   ├── css/piano.css   # Single workspace design system and layout rules
 │   ├── index.html      # Permanent single-workspace application shell
 │   └── js/
-│       ├── audio/      # PlaybackClock, SongAudioController, PianoPlayback, Practice mic
-│       ├── engine/     # Real-time fingering, transitions, and theory formatters
-│       └── ui/         # DynamicChordReel, PianoKeyboard, WorkspaceHandController
-├── tests/              # 195 Python unit/integration tests + 55 Node client test suites
-└── docs/               # Architecture and technical specifications
+│       ├── audio/      # PlaybackClock, SongAudioController, PianoPlayback, StemMixer, Practice mic
+│       ├── engine/     # StudioTimelineAdapter, LearnModeController, transitions, formatters
+│       └── ui/         # UnifiedPianoScene (Three.js), PianoStudio3D, PianoStudio2D, SheetMusicStudio
+└── docs/               # Architecture, licenses, troubleshooting, and public screenshots
 ```
 
 ---
@@ -70,7 +69,7 @@ HotChords/
 ### Python (Backend)
 - Adhere to PEP 8 standards and type hinting where practical.
 - Keep `backend/api/router.py` thin; delegate all business and DSP logic to `backend/analysis/` and `backend/theory/`.
-- Ensure all new analysis outputs conform strictly to `SONG_RESULT_CONTRACT.md`.
+- Ensure all new analysis outputs conform strictly to `SongTimeline` (`backend/models/timeline.py`).
 
 ### JavaScript & CSS (Frontend)
 - Use **pure Vanilla ES6+** without adding heavy frontend frameworks.
@@ -80,28 +79,22 @@ HotChords/
 
 ---
 
-## 5. Testing Expectations
+## 5. Public CI & Local Verification
 
-All pull requests must pass the complete test suite before merging:
+Public GitHub Actions CI (`.github/workflows/ci.yml`) verifies:
 
 ```bash
-# 1. Run all Python backend tests (195 tests)
-pytest tests/
+# 1. Backend module imports, entrypoint compilation, and preflight
+python3 -m py_compile hotchords.py
+python3 -m backend.utils.preflight
 
-# 2. Run all frontend and UI/UX invariant tests (37 tests)
-npm test
+# 2. Frontend JS syntax checks
+for f in frontend/js/audio/*.js frontend/js/engine/*.js frontend/js/ui/*.js; do node --check "$f"; done
 
-# 3. Run master PlaybackClock & dual-renderer lifecycle tests (6 scenarios)
-node tests/test_playback_lifecycle.js
-
-# 4. Run client pitch detection and feedback bridge tests (12 tests)
-node tests/test_phase11_client_pitch_and_feedback.js
-node tests/test_phase12_client_metrics.js
+# 3. Runtime assets, packaging structure, and /health + core route smoke check
 ```
 
-### Adding New Tests
-- When adding a backend feature, add corresponding pytest unit tests in `tests/test_<feature>.py`.
-- When modifying playback or UI components, add verification assertions to `tests/test_playback_lifecycle.js` or `tests/test_app_ui.js`.
+> Note: Internal regression test suites (`tests/`) are kept local-only for developer validation and are not shipped in the public GitHub repository.
 
 ---
 
@@ -110,5 +103,5 @@ node tests/test_phase12_client_metrics.js
 1. **Open an Issue / Discussion:** For major architectural changes or new MIR algorithms, open a GitHub Issue first to align with the core maintainers.
 2. **Create a Feature Branch:** `git checkout -b feature/your-feature-name`
 3. **Commit Atomic Changes:** Write descriptive commit messages explaining *what* was changed and *why*.
-4. **Verify Locally:** Ensure `pytest tests/` and `npm test` pass 100% green and no console errors occur.
+4. **Verify Locally:** Ensure `python3 -m backend.utils.preflight`, frontend JS syntax checks (`node --check`), and a live app smoke test (`/health` and `/`) pass cleanly with no console errors.
 5. **Submit PR:** Open your pull request against the `main` branch with a summary of changes and test evidence.

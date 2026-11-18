@@ -1,31 +1,36 @@
 #!/usr/bin/env bash
 set -e
 
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "${PROJECT_ROOT}"
+
+# Canonical version from backend/models/__init__.py
+PYTHON_BIN="python3"
+if [ -f "${PROJECT_ROOT}/venv/bin/python3" ]; then
+    PYTHON_BIN="${PROJECT_ROOT}/venv/bin/python3"
+fi
+APP_VERSION=$("${PYTHON_BIN}" -c "import re, pathlib; m = re.search(r'APP_VERSION\s*=\s*[\"\x27]([^\"\x27]+)[\"\x27]', pathlib.Path('backend/models/__init__.py').read_text()); print(m.group(1) if m else '0.5.0')")
+ARCH_LABEL="AppleSilicon"
+if [ "$(uname -m)" = "x86_64" ]; then
+    ARCH_LABEL="Intel"
+fi
+
 echo "═════════════════════════════════════════════════════════════"
-echo "  Building HotChords v0.4.0 Standalone macOS DMG Installer  "
+echo "  Building HotChords v${APP_VERSION} Standalone macOS DMG Installer  "
 echo "═════════════════════════════════════════════════════════════"
 
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DIST_DIR="${PROJECT_ROOT}/dist"
 APP_NAME="HotChords"
 APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 DMG_STAGING="${DIST_DIR}/dmg_staging"
-DMG_OUTPUT="${DIST_DIR}/HotChords-v0.4.0-macOS-AppleSilicon.dmg"
+DMG_OUTPUT="${DIST_DIR}/HotChords-v${APP_VERSION}-macOS-${ARCH_LABEL}.dmg"
 
 # 1. Clean previous build staging
 echo "  🧹 Cleaning previous build staging..."
 rm -rf "${APP_BUNDLE}" "${DMG_STAGING}" "${DMG_OUTPUT}" "${PROJECT_ROOT}/build"
 mkdir -p "${DMG_STAGING}"
 
-cd "${PROJECT_ROOT}"
-
-# 2. Determine Python interpreter for build machine execution
-PYTHON_BIN="python3"
-if [ -f "${PROJECT_ROOT}/venv/bin/python3" ]; then
-    PYTHON_BIN="${PROJECT_ROOT}/venv/bin/python3"
-fi
-
-# 3. Bundle standalone application with PyInstaller
+# 2. Bundle standalone application with PyInstaller
 echo "  📦 Bundling self-contained standalone application with PyInstaller..."
 "${PYTHON_BIN}" -m PyInstaller \
     --noconfirm \
@@ -34,7 +39,7 @@ echo "  📦 Bundling self-contained standalone application with PyInstaller..."
     --name "${APP_NAME}" \
     --osx-bundle-identifier "com.hotfix.hotchords" \
     --add-data "frontend:frontend" \
-    --add-data "test songs:test songs" \
+    --add-data "backend/assets:backend/assets" \
     --hidden-import "uvicorn.logging" \
     --hidden-import "uvicorn.loops" \
     --hidden-import "uvicorn.loops.auto" \
@@ -57,7 +62,7 @@ fi
 
 # 4. Finalize Info.plist metadata and bundle resources
 echo "  ⚙️ Customizing Info.plist..."
-cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
+cat << EOF > "${APP_BUNDLE}/Contents/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -73,9 +78,9 @@ cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.4.0</string>
+    <string>${APP_VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>0.4.0</string>
+    <string>${APP_VERSION}</string>
     <key>LSMinimumSystemVersion</key>
     <string>11.0</string>
     <key>NSHighResolutionCapable</key>

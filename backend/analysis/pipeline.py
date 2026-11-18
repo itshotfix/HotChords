@@ -90,12 +90,16 @@ def detect_time_sig(y, sr, tempo):
 # ══════════════════════════════════════════════════════════════
 #  MAIN ANALYSIS PIPELINE
 # ══════════════════════════════════════════════════════════════
-def analyze_song(filepath: str, progress_callback=None, upd_callback=None):
+def analyze_song(filepath: str, progress_callback=None, upd_callback=None, quality_mode: str = "balanced"):
     """
     Main entry point for HotChords song analysis.
     Executes the complete Phase 3 Multi-Instrument & Source-Aware pipeline.
+    quality_mode: 'fast' | 'balanced' | 'high_accuracy'
     """
     cb = upd_callback if upd_callback is not None else progress_callback
+    normalized_mode = (quality_mode or "balanced").strip().lower()
+    if normalized_mode not in ("fast", "balanced", "high_accuracy"):
+        normalized_mode = "balanced"
 
     def update(msg, pct):
         if cb:
@@ -311,6 +315,53 @@ def analyze_song(filepath: str, progress_callback=None, upd_callback=None):
     # Perform Instrument Evidence profiling
     instruments = build_instrument_evidence_registry(sources=registered_waveforms, sr=sr)
 
+    # Extract note-level melody & polyphonic accompaniment before releasing waveforms
+    from backend.analysis.note_transcription import transcribe_melody_notes
+    from backend.analysis.engines.transcription_orchestrator import TranscriptionOrchestrator
+    beat_list = list(timing_data.beat_times or [])
+    y_melody_src = registered_waveforms.get("vocals")
+    if y_melody_src is None or len(y_melody_src) == 0:
+        y_melody_src = y_harm
+
+    melody_notes = transcribe_melody_notes(
+        y=y_melody_src,
+        sr=sr,
+        hop_length=hop,
+        beat_times=beat_list,
+        scale_pcs=scale_note_idxs,
+    )
+
+    y_accomp_src = registered_waveforms.get("other")
+    if y_accomp_src is None or len(y_accomp_src) == 0:
+        y_accomp_src = registered_waveforms.get("inst", y_harm)
+
+    enable_bp = normalized_mode in ("balanced", "high_accuracy")
+    orchestrator = TranscriptionOrchestrator(
+        enable_basic_pitch=enable_bp,
+        parallel=True,
+    )
+    accompaniment_notes = orchestrator.transcribe_accompaniment(
+        y_harm=y_accomp_src,
+        sr=sr,
+        y_bass=y_bass_arr,
+        hop_length=hop,
+        beat_times=beat_list,
+    )
+
+    available_stems: dict[str, str] = {}
+    stem_file_paths: dict[str, str] = {}
+    if sep_success:
+        for s_key, s_path in [
+            ("vocals", voc_path),
+            ("instrumental", inst_path),
+            ("other", other_path),
+            ("bass", bass_path),
+            ("drums", drums_path),
+        ]:
+            if s_path and os.path.isfile(s_path):
+                available_stems[s_key] = f"/stems/{s_key}"
+                stem_file_paths[s_key] = s_path
+
     # Release unneeded waveform buffers from memory
     registered_waveforms.clear()
     gc.collect()
@@ -433,6 +484,20 @@ def analyze_song(filepath: str, progress_callback=None, upd_callback=None):
         if c not in roman_numerals:
             roman_numerals[c] = chord_roman(c, friendly_key, scale)
 
+    # Synthesize canonical Intermediate & Beginner Piano Arrangements + Grand Staff Notation
+    from backend.theory.piano_arrangement import generate_piano_arrangements
+    arr_bundle = generate_piano_arrangements(
+        chords=fused_chords,
+        beginner_chords=beginner_chords,
+        melody_notes=melody_notes,
+        accompaniment_notes=accompaniment_notes,
+        tempo=tempo,
+        time_sig=time_sig,
+        key=friendly_key,
+        scale=scale,
+        duration=duration,
+    )
+
     # ══════════════════════════════════════════════════════════════
     #  STAGE 7: STRUCTURE & 4-CHORD LOOP DETECTION
     # ══════════════════════════════════════════════════════════════
@@ -507,7 +572,14 @@ def analyze_song(filepath: str, progress_callback=None, upd_callback=None):
         'four_chord_loop': four_chord_loop.model_dump(by_alias=True),
         'practice': practice_plan.model_dump(by_alias=True),
         'practice_plan': practice_plan.model_dump(by_alias=True),
+        'notes': arr_bundle['notes'],
+        'beginner_notes': arr_bundle['beginner_notes'],
+        'notation': arr_bundle['notation'],
+        'stems': available_stems,
+        '_stem_paths': stem_file_paths,
         # Phase 2-4 Engine, Source Selection & MIR Metadata
+        'quality_mode': normalized_mode,
+        'transcription_engines': orchestrator.last_engine_status,
         'engine': engine_manager.primary_engine.name if engine_manager.primary_engine else "lv_chordia",
         'fallback_reason': None,
         'status': final_status.value,
@@ -524,7 +596,12 @@ def analyze_song(filepath: str, progress_callback=None, upd_callback=None):
     }
 
 
-def run_pipeline(filepath: str, progress_callback=None, upd_callback=None):
+def run_pipeline(filepath: str, progress_callback=None, upd_callback=None, quality_mode: str = "balanced"):
     """Wrapper alias for analyze_song."""
-    return analyze_song(filepath=filepath, progress_callback=progress_callback, upd_callback=upd_callback)
+    return analyze_song(
+        filepath=filepath,
+        progress_callback=progress_callback,
+        upd_callback=upd_callback,
+        quality_mode=quality_mode,
+    )
 

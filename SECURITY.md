@@ -6,9 +6,9 @@ HotChords is actively developed. We support security updates for the current min
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.4.x   | :white_check_mark: |
-| 0.3.x   | :x:                |
-| < 0.3.0 | :x:                |
+| 0.5.x   | :white_check_mark: |
+| 0.4.x   | :x:                |
+| < 0.4.0 | :x:                |
 
 ---
 

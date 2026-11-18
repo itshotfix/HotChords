@@ -41,6 +41,6 @@ if [ $? -ne 0 ]; then
     echo "  Common fixes:"
     echo "    1. Run bash scripts/setup_mac.sh to verify dependencies."
     echo "    2. Check if port 5500 is in use: lsof -i :5500"
-    echo "    3. See docs/TROUBLESHOOTING.md for more help."
+    echo "    3. See docs/getting-started/troubleshooting.md for more help."
     echo ""
 fi

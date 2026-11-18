@@ -7,7 +7,6 @@ Single source of truth for:
 - beginner chords
 - playback timing
 - piano playback
-- lyrics / transcripts
 - fingering & hand animation
 - notation data
 """
@@ -42,6 +41,26 @@ class HandVoicing(BaseModel):
     right_hand: List[HandVoicingNote] = Field(default_factory=list, alias="rightHand")
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class NoteEvent(BaseModel):
+    """
+    Canonical individual piano note event in a SongTimeline arrangement.
+    Shared across 2D Piano Studio, 3D Piano Studio, Sheet Music View, and Note Playback.
+    """
+    midi: int = Field(..., ge=21, le=108, description="MIDI pitch (21=A0 .. 108=C8)")
+    note: Optional[str] = Field(default=None, description="Scientific pitch name, e.g. 'C4'")
+    start: float = Field(..., description="Note onset time in seconds")
+    end: float = Field(..., description="Note release time in seconds")
+    velocity: int = Field(default=80, ge=1, le=127, description="MIDI velocity [1, 127]")
+    hand: str = Field(default="right", description="'left' or 'right'")
+    finger: int = Field(default=1, ge=1, le=5, description="Finger assignment 1=Thumb .. 5=Pinky")
+    color: Optional[str] = Field(default=None, description="Pedagogical finger color hex")
+    source: str = Field(default="melody", description="'melody', 'accompaniment', or 'chord'")
+    confidence: Optional[float] = Field(default=None, description="Detection confidence [0.0, 1.0]")
+    chord: Optional[str] = Field(default=None, description="Associated harmonic chord symbol")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class ChordEvent(BaseModel):
@@ -153,6 +172,11 @@ class SongTimeline(BaseModel):
     # Separate chord timelines
     original_chords: List[ChordEvent] = Field(default_factory=list, alias="originalChords")
     beginner_chords: Optional[List[ChordEvent]] = Field(default=None, alias="beginnerChords")
+
+    # Canonical note-level piano arrangements (Intermediate & Beginner)
+    notes: List[NoteEvent] = Field(default_factory=list, description="Intermediate two-hand piano arrangement")
+    beginner_notes: List[NoteEvent] = Field(default_factory=list, alias="beginnerNotes", description="Beginner two-hand piano arrangement")
+    stems: Optional[Dict[str, str]] = Field(default_factory=dict, description="Available separated audio stems")
 
     # Optional structural & notation data
     sections: Optional[List[SectionEvent]] = Field(default_factory=list)
@@ -389,11 +413,91 @@ class SongTimeline(BaseModel):
                 practice_plan=data.get("practice_plan") or data.get("practicePlan") or data.get("practice"),
             )
 
+        # Parse or synthesize canonical piano arrangements & grand staff notation
+        raw_notes = data.get("notes")
+        raw_beg_notes = data.get("beginner_notes") or data.get("beginnerNotes")
+        raw_notation = data.get("notation")
+
+        if raw_notes is None or raw_beg_notes is None or raw_notation is None:
+            try:
+                from backend.theory.piano_arrangement import generate_piano_arrangements
+                orig_chord_dicts = [
+                    {
+                        "chord": c.chord_name,
+                        "time": c.start_time,
+                        "end": c.end_time,
+                        "voicing": c.voicing.model_dump(by_alias=True) if hasattr(c.voicing, "model_dump") else c.voicing,
+                    }
+                    for c in orig_events
+                ]
+                beg_chord_dicts = [
+                    {
+                        "chord": c.chord_name,
+                        "time": c.start_time,
+                        "end": c.end_time,
+                        "voicing": c.voicing.model_dump(by_alias=True) if hasattr(c.voicing, "model_dump") else c.voicing,
+                    }
+                    for c in (beg_events if beg_events is not None else orig_events)
+                ]
+                arr = generate_piano_arrangements(
+                    chords=orig_chord_dicts,
+                    beginner_chords=beg_chord_dicts,
+                    melody_notes=data.get("melody_notes"),
+                    accompaniment_notes=data.get("accompaniment_notes"),
+                    tempo=float(metadata.tempo or 120.0),
+                    time_sig=metadata.time_sig or "4/4",
+                    key=metadata.key or "C",
+                    scale=metadata.scale or "Major",
+                    duration=duration,
+                )
+                if raw_notes is None:
+                    raw_notes = arr["notes"]
+                if raw_beg_notes is None:
+                    raw_beg_notes = arr["beginner_notes"]
+                if raw_notation is None:
+                    raw_notation = arr["notation"]
+            except Exception:
+                raw_notes = raw_notes or []
+                raw_beg_notes = raw_beg_notes or []
+
+        def _to_note_event(n: Union[Dict[str, Any], NoteEvent]) -> NoteEvent:
+            if isinstance(n, NoteEvent):
+                return n
+            return NoteEvent(
+                midi=int(n.get("midi", n.get("pitch", 60))),
+                note=n.get("note"),
+                start=float(n.get("start", n.get("startTime", 0.0))),
+                end=float(n.get("end", n.get("endTime", 0.25))),
+                velocity=int(n.get("velocity", 80)),
+                hand=str(n.get("hand", "right")),
+                finger=int(n.get("finger", 1) or 1),
+                color=n.get("color"),
+                source=str(n.get("source", "melody")),
+                confidence=float(n["confidence"]) if n.get("confidence") is not None else None,
+                chord=n.get("chord"),
+            )
+
+        note_events = [_to_note_event(n) for n in (raw_notes or [])]
+        beg_note_events = [_to_note_event(n) for n in (raw_beg_notes or [])]
+
+        notation_obj = None
+        if isinstance(raw_notation, NotationData):
+            notation_obj = raw_notation
+        elif isinstance(raw_notation, dict):
+            try:
+                notation_obj = NotationData.model_validate(raw_notation)
+            except Exception:
+                notation_obj = None
+
         return cls(
             metadata=metadata,
             duration=duration,
             originalChords=orig_events,
             beginnerChords=beg_events,
+            notes=note_events,
+            beginnerNotes=beg_note_events,
+            stems=data.get("stems") or {},
+            notation=notation_obj,
             sections=section_events,
             structure=struct_obj,
             four_chord_loop=loop_obj,
@@ -446,7 +550,12 @@ class SongTimeline(BaseModel):
             "chord_data": self.chord_data or {},
             "roman_numerals": self.roman_numerals or {},
             "sections": sections_legacy,
+            "notes": [n.model_dump(by_alias=True) for n in (self.notes or [])],
+            "beginner_notes": [n.model_dump(by_alias=True) for n in (self.beginner_notes or [])],
+            "stems": self.stems or {},
         }
+        if self.notation:
+            result["notation"] = self.notation.model_dump(by_alias=True)
 
         if self.beginner_chords is not None:
             beginner_legacy = [

@@ -71,6 +71,8 @@ temp/
 .cache/
 .pytest_cache/
 *.zip
+*.mp4
+docs/screenshots/
 
 # Node modules
 node_modules/

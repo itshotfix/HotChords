@@ -1,0 +1,110 @@
+name: Build macOS DMG Installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos-dmg:
+    name: Build & Validate macOS DMG (Apple Silicon)
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies & PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build macOS DMG
+        run: bash scripts/build_macos_dmg.sh
+
+      - name: Validate DMG, Assets & Runtime Health
+        run: |
+          set -euo pipefail
+          DMG_PATH=$(ls dist/HotChords-v*-macOS-*.dmg | head -n 1)
+          if [ ! -f "$DMG_PATH" ]; then
+            echo "DMG not found in dist/"
+            exit 1
+          fi
+
+          SHA256=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')
+          SIZE=$(stat -f%z "$DMG_PATH")
+          echo "$SHA256  $(basename "$DMG_PATH")" > dist/macos_dmg_sha256.txt
+          echo "DMG: $DMG_PATH ($SIZE bytes)"
+          echo "SHA-256: $SHA256"
+
+          MOUNT_DIR=$(mktemp -d)
+          hdiutil attach "$DMG_PATH" -mountpoint "$MOUNT_DIR" -nobrowse -quiet
+          trap 'hdiutil detach "$MOUNT_DIR" -quiet || true; rm -rf "$MOUNT_DIR"' EXIT
+
+          APP_EXEC="$MOUNT_DIR/HotChords.app/Contents/MacOS/HotChords"
+          RES_DIR="$MOUNT_DIR/HotChords.app/Contents/Resources"
+          FW_DIR="$MOUNT_DIR/HotChords.app/Contents/Frameworks"
+
+          for rel in \
+            "frontend/index.html" \
+            "frontend/js/assets/hands/hand_left.glb" \
+            "frontend/js/assets/hands/hand_right.glb" \
+            "frontend/audio/samples/C4.mp3" \
+            "backend/assets/models/basic_pitch/nmp.onnx"
+          do
+            if [ ! -f "$RES_DIR/$rel" ] && [ ! -f "$FW_DIR/$rel" ]; then
+              echo "Missing bundled asset in HotChords.app: $rel"
+              exit 1
+            fi
+          done
+          echo "All required frontend, 3D hand, audio sample, and Basic Pitch ONNX assets verified."
+
+          "$APP_EXEC" >/tmp/hotchords_dmg_test.log 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true; hdiutil detach "$MOUNT_DIR" -quiet || true; rm -rf "$MOUNT_DIR"' EXIT
+
+          HEALTHY=0
+          for i in $(seq 1 20); do
+            sleep 2
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              echo "HotChords exited prematurely."
+              cat /tmp/hotchords_dmg_test.log || true
+              exit 1
+            fi
+            for port in 5500 5501 5502; do
+              if curl -fsS "http://127.0.0.1:${port}/health" >/tmp/hc_health.json 2>/dev/null && grep -Eq '"status"[[:space:]]*:[[:space:]]*"ready"' /tmp/hc_health.json; then
+                echo "Health check passed on port ${port}"
+                curl -fsS "http://127.0.0.1:${port}/" >/tmp/hc_root.html
+                grep -q "HotChords" /tmp/hc_root.html
+                HEALTHY=1
+                break
+              fi
+            done
+            if [ "$HEALTHY" -eq 1 ]; then break; fi
+          done
+
+          if [ "$HEALTHY" -ne 1 ]; then
+            echo "Application health check failed."
+            cat /tmp/hotchords_dmg_test.log || true
+            exit 1
+          fi
+          echo "macOS DMG runtime verification SUCCESS (ad-hoc signed; not Apple notarized)."
+
+      - name: Upload DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HotChords-macOS-AppleSilicon-DMG
+          path: |
+            dist/HotChords-v*-macOS-*.dmg
+            dist/macos_dmg_sha256.txt
+          if-no-files-found: error

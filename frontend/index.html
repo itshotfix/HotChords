@@ -3,65 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HotChords Workstation</title>
-    <meta name="description" content="HotChords — Interactive piano music stand. Follow along with simplified or original chords, hand diagrams, and persistent piano.">
+    <title>HotChords — Piano Studio & Arrangement Workstation</title>
+    <meta name="description" content="HotChords — Turn any song into an interactive 3D & 2D piano arrangement with synchronized sheet music and multi-stem audio mixing.">
     <link rel="stylesheet" href="/css/piano.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="/js/ui/unifiedPianoScene.js"></script>
 </head>
-<body class="app-shell">
+<body class="app-shell dark-studio">
 
-<!-- ╔══════════════════════════════════════════╗
-     ║  1. UPLOAD SCREEN (Initial State)        ║
-     ╚══════════════════════════════════════════╝ -->
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  1. HOME & SONG LIBRARY SCREEN (Initial Launch State)        ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
 <div id="upload-screen" class="screen app-stage-screen active">
     <header class="app-shell-header">
-        <div class="header-brand" onclick="resetApp()" title="HotChords Home">Hot<span>Chords</span> <span class="header-version">VER 0.4</span></div>
+        <div class="header-brand" onclick="resetApp()" title="HotChords Home">
+            Hot<span>Chords</span> <span class="header-version">VER 0.5</span>
+        </div>
+        <div class="header-nav-meta">Piano Studio &amp; Arrangement Workstation</div>
     </header>
 
-    <main class="upload-stage">
-        <div class="upload-content-wrap">
-            <div class="upload-text-group">
-                <h1 class="upload-headline">Turn any song into<br>chords you can play.</h1>
-                <p class="upload-subtext">Upload a song and HotChords will analyze it and show you how to play it on piano.</p>
-            </div>
-
-            <!-- Upload Drop Target Card -->
-            <div id="drop-zone" class="upload-drop-card" onclick="document.getElementById('file-input').click()" role="button" tabindex="0" aria-label="Upload song">
-                <div class="upload-icon-circle" aria-hidden="true">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
+    <main class="home-stage">
+        <div class="home-container">
+            <!-- Hero & Upload Section -->
+            <section class="upload-hero-panel" aria-labelledby="upload-headline">
+                <div class="upload-text-group">
+                    <h1 id="upload-headline" class="upload-headline">Turn any song into a playable piano arrangement.</h1>
+                    <p class="upload-subtext">Upload an audio track to generate Beginner and Intermediate two-hand piano arrangements, 3D hand guidance, and Grand Staff sheet music.</p>
                 </div>
-                <div class="upload-prompt-title">Upload Song</div>
-                <div class="upload-prompt-sub">Drop your audio file here or <span class="browse-highlight">click to browse</span></div>
-                <div class="upload-formats-badge">MP3 · WAV · M4A · FLAC</div>
-                <input type="file" id="file-input" class="hidden" accept=".mp3,.wav,.flac,.m4a,.ogg,.aac">
-            </div>
+
+                <div id="drop-zone" class="upload-drop-card" onclick="document.getElementById('file-input').click()" role="button" tabindex="0" aria-label="Upload song audio file">
+                    <div class="upload-icon-circle" aria-hidden="true">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                    </div>
+                    <div class="upload-prompt-title">Upload Song</div>
+                    <div class="upload-prompt-sub">Drop your audio file here or <span class="browse-highlight">click to browse</span></div>
+                    <div class="upload-formats-badge">MP3 · WAV · FLAC · M4A · OGG</div>
+                    <input type="file" id="file-input" class="hidden" accept=".mp3,.wav,.flac,.m4a,.ogg,.aac">
+                </div>
+            </section>
+
+            <!-- 10-Song Piano Tutorial Library Section -->
+            <section id="library-section" class="library-panel" aria-labelledby="library-heading">
+                <div class="library-header-row">
+                    <div>
+                        <h2 id="library-heading" class="library-title">Song Library</h2>
+                        <p class="library-subtitle">Automatically retains your latest 10 completed piano arrangements for instant access.</p>
+                    </div>
+                    <div class="library-header-actions">
+                        <button class="lib-btn lib-btn--secondary" id="btn-new-folder" onclick="handleCreateFolder()">+ New Folder</button>
+                        <span id="library-count-badge" class="library-count-badge">0 / 10 Saved</span>
+                    </div>
+                </div>
+
+                <div class="library-toolbar">
+                    <input type="search" id="lib-search-input" class="lib-search-input" placeholder="Search songs by title or key..." oninput="renderFilteredLibrary()" aria-label="Search library songs">
+                    <div class="lib-filter-pills" role="group" aria-label="Filter songs">
+                        <button class="lib-filter-btn active" data-filter="all" onclick="setLibraryFilter('all')">All</button>
+                        <button class="lib-filter-btn" data-filter="stems" onclick="setLibraryFilter('stems')">Stems Ready</button>
+                        <button class="lib-filter-btn" data-filter="nostems" onclick="setLibraryFilter('nostems')">Needs Stems</button>
+                    </div>
+                    <select id="lib-folder-filter" class="lib-select" onchange="renderFilteredLibrary()" aria-label="Filter by folder">
+                        <option value="all">All Folders</option>
+                        <option value="Unsorted">Unsorted</option>
+                    </select>
+                    <select id="lib-sort-select" class="lib-select" onchange="renderFilteredLibrary()" aria-label="Sort songs">
+                        <option value="newest">Newest first</option>
+                        <option value="title">Title (A–Z)</option>
+                        <option value="tempo">Tempo (BPM)</option>
+                    </select>
+                </div>
+
+                <div id="library-status-banner" class="library-status-banner hidden" role="status" aria-live="polite"></div>
+
+                <div id="library-empty-state" class="library-empty-card">
+                    <div class="library-empty-title">No saved piano arrangements yet</div>
+                    <div class="library-empty-sub">Upload your first song above. Completed transcriptions will be saved here automatically so you can reopen them anytime in Piano Studio.</div>
+                </div>
+
+                <div id="library-grid" class="library-grid" role="list"></div>
+            </section>
         </div>
     </main>
 </div>
 
-<!-- ╔══════════════════════════════════════════╗
-     ║  2. PROCESSING / ANALYSIS SCREEN         ║
-     ╚══════════════════════════════════════════╝ -->
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  2. PROCESSING / TRANSCRIPTION PROGRESS SCREEN               ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
 <div id="analysis-screen" class="screen app-stage-screen">
     <header class="app-shell-header">
-        <div class="header-brand" onclick="resetApp()" title="HotChords Home">Hot<span>Chords</span> <span class="header-version">VER 0.4</span></div>
-        <div class="header-processing-badge"><span class="badge-pulse-dot"></span> Analyzing audio</div>
+        <div class="header-brand" onclick="resetApp()" title="HotChords Home">
+            Hot<span>Chords</span> <span class="header-version">VER 0.5</span>
+        </div>
+        <div class="header-processing-badge"><span class="badge-pulse-dot"></span> Transcribing Piano Arrangement</div>
     </header>
 
     <main class="processing-stage">
         <div class="processing-content-wrap">
-            
             <div class="processing-header-group">
-                <div class="processing-eyebrow">Analyzing your song</div>
+                <div class="processing-eyebrow">Building Piano Studio Arrangement</div>
                 <h2 id="prog-file-name" class="processing-song-title">Song.mp3</h2>
             </div>
 
-            <!-- Animated Waveform Bars Activity -->
             <div class="processing-waveform-activity" aria-hidden="true">
                 <span class="wave-tick t1"></span>
                 <span class="wave-tick t2"></span>
@@ -73,186 +127,342 @@
                 <span class="wave-tick t8"></span>
             </div>
 
-            <!-- Progress Bar -->
-            <div id="prog-bar-container" class="processing-prog-track">
+            <div id="prog-bar-container" class="processing-prog-track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                 <div id="prog-bar" class="processing-prog-bar" style="width: 5%;"></div>
             </div>
 
-            <!-- Active Stage Message -->
-            <div id="prog-msg" class="processing-status-msg">Preparing audio...</div>
+            <div id="prog-msg" class="processing-status-msg" aria-live="polite">Preparing audio...</div>
 
-            <!-- Live Pipeline Stage Milestones -->
             <div class="pipeline-milestones-list">
                 <div id="stage-prep" class="milestone-row active">
                     <span class="milestone-status-icon">●</span>
-                    <span class="milestone-label">Preparing audio & separation</span>
+                    <span class="milestone-label">Separating audio stems &amp; profiling signal</span>
                 </div>
                 <div id="stage-feat" class="milestone-row pending">
                     <span class="milestone-status-icon">○</span>
-                    <span class="milestone-label">Analyzing musical features & tempo</span>
+                    <span class="milestone-label">Detecting musical key, tempo &amp; beat grid</span>
                 </div>
                 <div id="stage-chord" class="milestone-row pending">
                     <span class="milestone-status-icon">○</span>
-                    <span class="milestone-label">Detecting chords & musical key</span>
+                    <span class="milestone-label">Transcribing melody, harmony &amp; chord progression</span>
                 </div>
                 <div id="stage-piano" class="milestone-row pending">
                     <span class="milestone-status-icon">○</span>
-                    <span class="milestone-label">Building piano voicings & fingering</span>
+                    <span class="milestone-label">Generating Beginner &amp; Intermediate arrangements</span>
                 </div>
                 <div id="stage-workspace" class="milestone-row pending">
                     <span class="milestone-status-icon">○</span>
-                    <span class="milestone-label">Preparing interactive music stand</span>
+                    <span class="milestone-label">Saving to Library &amp; launching Piano Studio</span>
                 </div>
             </div>
 
-            <!-- Error State Box -->
-            <div id="prog-error-box" class="processing-error-panel hidden">
+            <div id="prog-error-box" class="processing-error-panel hidden" role="alert">
                 <div class="error-panel-title">Analysis Issue Encountered</div>
                 <div id="prog-error-detail" class="error-panel-detail"></div>
                 <div class="error-panel-actions">
                     <button class="err-btn err-btn-primary" onclick="retryLastFile()">Retry Analysis</button>
-                    <button class="err-btn err-btn-secondary" onclick="resetApp()">Choose Another File</button>
+                    <button class="err-btn err-btn-secondary" onclick="resetApp()">Back to Library</button>
                 </div>
             </div>
-
         </div>
     </main>
 </div>
 
 <!-- ╔══════════════════════════════════════════════════════════════╗
-     ║  3. PERMANENT SINGLE WORKSPACE (Interactive Music Stand)     ║
-     ║  Hierarchy:                                                  ║
-     ║  1. HEADER (Logo + Metadata + Mode Selector + Controls)     ║
-     ║  2. CENTRAL CHORD LEARNING (Left Hand | 3 Chords | Right)    ║
-     ║  3. PERSISTENT PIANO                                         ║
-     ║  4. PLAYBACK (Waveform + Transport Controls)                 ║
+     ║  3. PIANO STUDIO WORKSPACE                                   ║
      ╚══════════════════════════════════════════════════════════════╝ -->
-<div id="workspace" class="workspace hidden" data-mode="simplified">
+<div id="workspace" class="workspace hidden" data-mode="simplified" data-studio-view="3d">
 
-    <!-- 1. HEADER ROW -->
+    <!-- 1. STUDIO HEADER BAR -->
     <header class="ws-header">
-        <div class="ws-logo" onclick="resetApp()" title="New Song">Hot<span>Chords</span> <span class="ws-version">VER 0.4</span></div>
-
-        <div class="ws-meta">
-            <div class="ws-meta-item"><span class="ws-meta-label">Key</span><span class="ws-meta-val" id="val-key">—</span></div>
-            <div class="ws-meta-item"><span class="ws-meta-label">BPM</span><span class="ws-meta-val" id="val-bpm">—</span></div>
-            <div class="ws-meta-item"><span class="ws-meta-label">Time</span><span class="ws-meta-val" id="val-sig">—</span></div>
-            <div class="ws-meta-item" id="meta-source-item" title="Harmonic detection source"><span class="ws-meta-label">Detected From</span><span class="ws-meta-val" id="val-source">—</span></div>
-            <div class="ws-meta-item" id="meta-confidence-item" title="Confidence in the detected harmony"><span class="ws-meta-label">Chord Confidence</span><span class="ws-meta-val" id="val-confidence">—</span></div>
-            <div class="ws-meta-item ws-meta-track"><span class="ws-meta-label">Track</span><span class="ws-meta-val" id="res-file-name">—</span></div>
-        </div>
-
-        <!-- Mode Selector: Simplified vs Original Chords -->
-        <div class="ws-mode-selector" role="tablist" aria-label="Chord mode">
-            <button class="mode-btn active" data-mode="simplified" id="mode-btn-simplified" onclick="setMode('simplified')" role="tab" aria-selected="true">Simplified</button>
-            <button class="mode-btn"        data-mode="original"   id="mode-btn-original"   onclick="setMode('original')"   role="tab" aria-selected="false">Original</button>
-        </div>
-
-        <div class="ws-quick-controls">
-            <div class="speed-group">
-                <button class="speed-btn active" id="spd-100" onclick="setSpeed(1.0)">1.00×</button>
-                <button class="speed-btn"         id="spd-075" onclick="setSpeed(0.75)">0.75×</button>
-                <button class="speed-btn"         id="spd-050" onclick="setSpeed(0.50)">0.50×</button>
+        <div class="ws-header-left">
+            <button class="studio-back-btn" id="btn-back-library" onclick="resetApp()" title="Back to Song Library" aria-label="Back to Song Library">
+                ‹ Library
+            </button>
+            <div class="ws-logo" onclick="resetApp()" title="HotChords Home">Hot<span>Chords</span> <span class="ws-version">VER 0.5</span></div>
+            <div class="ws-song-info">
+                <span class="ws-song-title" id="res-file-name">Untitled Track</span>
+                <div class="ws-meta">
+                    <span class="ws-meta-pill"><span class="ws-meta-label">Key</span> <span class="ws-meta-val" id="val-key">—</span></span>
+                    <span class="ws-meta-pill"><span class="ws-meta-label">BPM</span> <span class="ws-meta-val" id="val-bpm">—</span></span>
+                </div>
             </div>
-            <button class="ctrl-btn" id="btn-mic-practice" onclick="handleToggleMicPractice()" title="Toggle Real-Time Microphone Practice">Practice: OFF</button>
-            <button class="ctrl-btn" id="btn-sustain"   onclick="handleToggleSustain()" title="Toggle piano sustain pedal">Sustain OFF</button>
-            <button class="ctrl-btn danger"              onclick="handleStop()">■ Stop</button>
-            <button class="ctrl-btn" id="btn-new-song"  onclick="resetApp()">New Song</button>
         </div>
-    </header>
 
-    <!-- 2. CENTRAL CHORD LEARNING AREA: Left Hand | 3-Chord Reel | Right Hand -->
-    <main class="ws-learning-area">
-
-        <!-- Left Hand Column (Bass) -->
-        <aside id="ws-hand-left" class="ws-hand-col ws-hand-col--left" aria-label="Left hand bass guidance">
-            <div class="ws-hand-label">Left Hand (Bass)</div>
-            <div id="ws-lh-svg" class="ws-hand-svg"></div>
-            <div id="ws-lh-chips" class="ws-finger-chips"><span class="ws-chip-idle">—</span></div>
-        </aside>
-
-        <!-- Center: 3-Chord Reel (Prev < Current Hero > Next) -->
-        <section class="ws-chord-center">
-            
-            <!-- Fixed Stationary Column Labels Header Row -->
-            <div class="ws-fixed-labels-row" aria-hidden="true">
-                <div class="ws-fixed-label ws-fixed-label--prev">PREVIOUS</div>
-                <div class="ws-fixed-label ws-fixed-label--current">CURRENT CHORD</div>
-                <div class="ws-fixed-label ws-fixed-label--next">NEXT</div>
+        <div class="ws-header-right">
+            <!-- Arrangement Selection: Beginner vs Intermediate -->
+            <div class="ws-mode-selector" role="tablist" aria-label="Arrangement difficulty">
+                <button class="mode-btn active" data-mode="simplified" id="mode-btn-simplified" onclick="setMode('simplified')" role="tab" aria-selected="true" title="Melody over simplified chords with easy fingering">Beginner</button>
+                <button class="mode-btn"        data-mode="original"   id="mode-btn-original"   onclick="setMode('original')"   role="tab" aria-selected="false" title="Full two-hand piano arrangement">Intermediate</button>
             </div>
 
-            <!-- 3-Chord Viewport & Physical Track -->
-            <div id="chord-viewport" class="ws-chord-viewport">
-                <div id="chord-track" class="ws-chord-track">
+            <!-- Sheet Music View Toggle -->
+            <button class="studio-pill-btn" id="view-btn-sheet" onclick="toggleSheetView()" title="Toggle Grand Staff Sheet Music View">
+                Sheet
+            </button>
 
-                    <div id="chord-prev" class="chord-card chord-card--prev" title="Click to go back">
-                        <div class="chord-card-name" data-chord-name>—</div>
+            <!-- Unified VIEW Control (Piano Visualisation, Camera Position, Display Settings) -->
+            <div class="studio-popover-wrap">
+                <button class="studio-pill-btn active" id="btn-view-menu" onclick="toggleStudioPopover('view-menu-popover')" aria-haspopup="true" aria-expanded="false">
+                    VIEW ▾
+                </button>
+                <div id="view-menu-popover" class="studio-dropdown-card hidden" role="menu" aria-label="View controls">
+                    <div class="dropdown-section-label">Piano visualisation</div>
+                    <div class="dropdown-segmented-row two-col">
+                        <button class="dropdown-seg-btn studio-view-btn active" data-view="3d" id="view-btn-3d" onclick="setStudioView('3d')">3D Piano</button>
+                        <button class="dropdown-seg-btn studio-view-btn"        data-view="2d" id="view-btn-2d" onclick="setStudioView('2d')">2D Roll</button>
                     </div>
 
-                    <div id="chord-current" class="chord-card chord-card--current" aria-live="polite" aria-atomic="true">
-                        <div class="chord-card-name chord-card-name--hero" data-chord-name>—</div>
-                        <div class="chord-card-voicing" data-chord-voicing></div>
-                        <div id="ws-feedback-chip" class="ws-feedback-chip hidden">Listening...</div>
-                        <div class="chord-progress-track" aria-hidden="true">
-                            <div class="chord-progress-fill" id="chord-progress-fill"></div>
+                    <div id="camera-position-section">
+                        <div class="dropdown-section-label">Camera position</div>
+                        <div class="dropdown-segmented-row">
+                            <button class="dropdown-seg-btn camera-preset-btn active" data-cam="performer" id="cam-btn-performer" onclick="set3DCamera('performer')">Performer</button>
+                            <button class="dropdown-seg-btn camera-preset-btn"        data-cam="overhead"  id="cam-btn-overhead"  onclick="set3DCamera('overhead')">Overhead</button>
+                            <button class="dropdown-seg-btn camera-preset-btn"        data-cam="closeup"   id="cam-btn-closeup"   onclick="set3DCamera('closeup')">Close-up</button>
                         </div>
                     </div>
 
-                    <div id="chord-next" class="chord-card chord-card--next" title="Click to skip ahead">
-                        <div class="chord-card-name" data-chord-name>—</div>
+                    <div class="dropdown-section-label">Display settings</div>
+                    <div class="dropdown-switch-row">
+                        <div>
+                            <div class="dropdown-switch-title">Show Hands</div>
+                            <div class="dropdown-switch-sub">Animated 3D hands &amp; finger positioning</div>
+                        </div>
+                        <button class="studio-switch-btn active" id="btn-3d-hands" onclick="toggle3DHands()" role="switch" aria-checked="true">ON</button>
                     </div>
-
+                    <div class="dropdown-switch-row">
+                        <div>
+                            <div class="dropdown-switch-title">Show Colour Keys</div>
+                            <div class="dropdown-switch-sub">Highlight melody, chords &amp; hands by colour</div>
+                        </div>
+                        <button class="studio-switch-btn active" id="btn-colour-key" onclick="toggleColourKeyLegend()" role="switch" aria-checked="true">ON</button>
+                    </div>
                 </div>
             </div>
+
+            <!-- Stem & MIDI Download Options -->
+            <div class="studio-popover-wrap">
+                <button class="studio-pill-btn" id="btn-download-menu" onclick="toggleStudioPopover('download-menu-popover')" aria-haspopup="true" aria-expanded="false">
+                    Download ▾
+                </button>
+                <div id="download-menu-popover" class="studio-dropdown-card hidden" role="menu" aria-label="Download stems and MIDI">
+                    <div class="dropdown-section-label">Audio Stems</div>
+                    <div class="download-item-row">
+                        <div>
+                            <div class="dropdown-switch-title">Vocals</div>
+                            <div class="dropdown-switch-sub" id="dl-vocals-sub">Isolated vocal track (.wav)</div>
+                        </div>
+                        <button class="studio-action-btn" id="btn-dl-vocals" onclick="handleDownloadStem('vocals')" disabled>Unavailable</button>
+                    </div>
+                    <div class="download-item-row">
+                        <div>
+                            <div class="dropdown-switch-title">Instrumental</div>
+                            <div class="dropdown-switch-sub" id="dl-instrumental-sub">Backing track without vocals (.wav)</div>
+                        </div>
+                        <button class="studio-action-btn" id="btn-dl-instrumental" onclick="handleDownloadStem('instrumental')" disabled>Unavailable</button>
+                    </div>
+                    <div id="studio-extract-stems-row" class="download-extract-cta">
+                        <button class="studio-extract-btn" id="btn-extract-stems-studio" onclick="handleExtractStemsForActiveSong()">
+                            Extract Vocals &amp; Instrumental Stems
+                        </button>
+                    </div>
+                    <div class="dropdown-section-label" style="margin-top:10px;">Arrangement MIDI</div>
+                    <div class="download-item-row">
+                        <div>
+                            <div class="dropdown-switch-title">Beginner Piano (.mid)</div>
+                            <div class="dropdown-switch-sub">Simplified two-hand MIDI file</div>
+                        </div>
+                        <button class="studio-action-btn" id="btn-export-midi-beginner" onclick="handleExportMidi('simplified')">Download</button>
+                    </div>
+                    <div class="download-item-row">
+                        <div>
+                            <div class="dropdown-switch-title">Intermediate Piano (.mid)</div>
+                            <div class="dropdown-switch-sub">Full two-hand MIDI file</div>
+                        </div>
+                        <button class="studio-action-btn" id="btn-export-midi" onclick="handleExportMidi('original')">Download</button>
+                    </div>
+                    <div id="download-feedback-msg" class="download-feedback-msg hidden" role="status" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <button class="studio-pill-btn" id="btn-chord-chart" onclick="toggleChordChartDrawer()" aria-expanded="false" title="Open Diatonic Chord Chart & Progression">Chord Chart</button>
+            <button class="studio-pill-btn" id="btn-new-song" onclick="resetApp()">+ New Song</button>
+        </div>
+    </header>
+
+    <!-- 2. CENTRAL PIANO STUDIO STAGE (3D Piano | 2D Roll | Sheet Music) -->
+    <main class="ws-learning-area">
+        <section class="ws-chord-center" style="position:relative; width:100%; height:100%;">
+            <!-- Colour Key Legend Strip -->
+            <div id="colour-key-legend" class="studio-colour-key-strip">
+                <span class="colour-key-item"><span class="colour-key-dot" style="background:#F7F4EF;"></span>Melody</span>
+                <span class="colour-key-item"><span class="colour-key-dot" style="background:#9696A2;"></span>Instrumental</span>
+                <span class="colour-key-item"><span class="colour-key-dot" style="background:#666672;"></span>Chords</span>
+                <span class="colour-key-item"><span class="colour-key-dot" style="background:#FF5A7A;"></span>Right hand</span>
+                <span class="colour-key-item"><span class="colour-key-dot" style="background:#8B6EFE;"></span>Left hand</span>
+            </div>
+
+            <!-- Synchronized 3D Piano & Animated Hands Studio View (Default) -->
+            <div id="studio-3d-stage" class="ws-studio-stage" aria-label="3D Piano Studio">
+                <div id="studio-3d-canvas-wrap" style="width:100%; height:100%;"></div>
+            </div>
+
+            <!-- Synchronized 2D Piano Roll Waterfall Studio View -->
+            <div id="studio-2d-stage" class="ws-studio-stage hidden" aria-label="2D Piano Roll Studio">
+                <div id="studio-2d-canvas-wrap" style="width:100%; height:100%;"></div>
+            </div>
+
+            <!-- Learn Mode HUD Banner -->
+            <div id="learn-hud-banner" class="learn-hud-banner hidden" role="status" aria-live="polite">
+                <div class="learn-hud-main">
+                    <span class="learn-hud-status-pill" id="learn-hud-status">WAITING</span>
+                    <span class="learn-hud-callout" id="learn-hud-callout">Press the glowing key</span>
+                </div>
+                <div class="learn-hud-meta">
+                    <span class="learn-hud-badge" id="learn-hud-streak">Streak: 0</span>
+                    <span class="learn-hud-badge" id="learn-hud-input-status">Virtual Piano / MIDI</span>
+                </div>
+            </div>
+
+            <!-- Synchronized Grand Staff Sheet Music View -->
+            <div id="studio-sheet-stage" class="ws-studio-stage hidden" aria-label="Grand Staff Sheet Music">
+                <div id="studio-sheet-canvas-wrap" style="width:100%; height:100%;"></div>
+            </div>
+
+            <!-- Diatonic Chord Chart Slide-Over Drawer -->
+            <aside id="chord-chart-drawer" class="chord-chart-drawer hidden" aria-label="Chord Chart Reference">
+                <div class="chord-drawer-header">
+                    <h3 class="chord-drawer-title" id="chord-drawer-key-title">Chords in C Major</h3>
+                    <button class="chord-drawer-close" onclick="toggleChordChartDrawer(false)" aria-label="Close Chord Chart">✕</button>
+                </div>
+                <div class="chord-section-box chord-main-box">
+                    <div id="chord-drawer-tiles" class="chord-drawer-tiles"></div>
+                </div>
+                <div class="chord-section-box chord-progression-box">
+                    <button class="chord-prog-toggle" id="btn-toggle-progression" onclick="toggleChordProgressionList()" aria-expanded="false">
+                        <span>Progression</span>
+                        <span id="chord-prog-chevron">▾</span>
+                    </button>
+                    <div id="chord-drawer-progression" class="chord-drawer-progression hidden"></div>
+                </div>
+            </aside>
         </section>
-
-
-        <!-- Right Hand Column (Harmony) -->
-        <aside id="ws-hand-right" class="ws-hand-col ws-hand-col--right" aria-label="Right hand harmony guidance">
-            <div class="ws-hand-label">Right Hand (Harmony)</div>
-            <div id="ws-rh-svg" class="ws-hand-svg"></div>
-            <div id="ws-rh-chips" class="ws-finger-chips"><span class="ws-chip-idle">—</span></div>
-        </aside>
-
     </main>
 
-    <!-- 3. PERSISTENT PIANO -->
-    <div class="ws-piano" id="ws-piano">
-        <div id="piano-keyboard"></div>
-    </div>
-
-    <!-- 4. PLAYBACK BAR / CONTROLS + WAVEFORM & TRANSPORT -->
+    <!-- 3. TRANSPORT & MIX CONTROL DOCK -->
     <footer class="ws-playback">
-        <!-- Primary Controls Row ABOVE Timeline -->
         <div class="ws-playback-controls-bar">
             <div class="ws-playback-left-group">
-                <button class="ctrl-btn" id="btn-transport-restart" onclick="handleRestart()" title="Restart track from beginning">↺ Restart</button>
                 <button class="play-btn" id="main-play-btn" onclick="handleTogglePlay()" aria-label="Play / Pause">
-                    <svg id="play-icon" width="14" height="14" viewBox="0 0 16 16" fill="white"><path d="M4.5 2.5l8.5 5.5-8.5 5.5V2.5z"/></svg>
+                    <svg id="play-icon" width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M4.5 2.5l8.5 5.5-8.5 5.5V2.5z"/></svg>
                 </button>
-                <button class="ctrl-btn" id="btn-track-loop" onclick="handleToggleTrackLoop()" title="Toggle full-track loop">⇄ Loop</button>
-                <button class="ctrl-btn hidden" id="btn-4chord-loop" onclick="handleToggle4ChordLoop()" title="Toggle 4-Chord Loop Practice">4-Chord Loop</button>
             </div>
+
+            <!-- Scrubber -->
+            <div class="ws-scrubber-center">
+                <input type="range" id="seek-bar" class="seek-bar" min="0" step="0.05" value="0" oninput="handleSeek(this.value)" aria-label="Playback position">
+            </div>
+
             <div class="ws-playback-right-group">
-                <!-- Audio Output Selector: Piano vs Original Track -->
-                <div class="ws-audio-selector" role="tablist" aria-label="Audio playback source">
-                    <button class="audio-src-btn active" data-audio-src="piano" id="audio-btn-piano" onclick="setAudioSource('piano')" role="tab" aria-selected="true">Piano Audio</button>
-                    <button class="audio-src-btn"        data-audio-src="original" id="audio-btn-original" onclick="setAudioSource('original')" role="tab" aria-selected="false">Original Track</button>
+                <!-- Learn Mode CTA -->
+                <button class="learn-cta-btn" id="btn-learn-mode" onclick="toggleLearnMode(true)" title="Interactive Wait-for-Note Learn Mode">
+                    Learn
+                </button>
+
+                <!-- Playback Speed Popover -->
+                <div class="studio-popover-wrap">
+                    <button class="studio-pill-btn speed-trigger-btn" id="btn-speed-menu" onclick="toggleStudioPopover('speed-menu-popover')" aria-haspopup="true" aria-expanded="false" title="Playback Speed">
+                        <span class="speed-trigger-icon" aria-hidden="true">◔</span>
+                        <span id="speed-trigger-label">1×</span>
+                    </button>
+                    <div id="speed-menu-popover" class="speed-menu-popover hidden" role="menu" aria-label="Playback speed">
+                        <div class="speed-menu-header">Speed</div>
+                        <button class="speed-menu-item" data-rate="0.25" onclick="selectSpeedOption(0.25)"><span>0.25×</span><span class="speed-check" aria-hidden="true"></span></button>
+                        <button class="speed-menu-item" data-rate="0.5"  onclick="selectSpeedOption(0.5)"><span>0.5×</span><span class="speed-check" aria-hidden="true"></span></button>
+                        <button class="speed-menu-item" data-rate="0.75" onclick="selectSpeedOption(0.75)"><span>0.75×</span><span class="speed-check" aria-hidden="true"></span></button>
+                        <button class="speed-menu-item active" data-rate="1" onclick="selectSpeedOption(1.0)"><span>1× <span class="speed-normal-tag">Normal</span></span><span class="speed-check" aria-hidden="true">✓</span></button>
+                        <button class="speed-menu-item" data-rate="1.25" onclick="selectSpeedOption(1.25)"><span>1.25×</span><span class="speed-check" aria-hidden="true"></span></button>
+                        <button class="speed-menu-item" data-rate="1.5"  onclick="selectSpeedOption(1.5)"><span>1.5×</span><span class="speed-check" aria-hidden="true"></span></button>
+                    </div>
+                </div>
+
+                <!-- Hand Filter (L / R) -->
+                <div class="ws-hand-selector" aria-label="Hand filter">
+                    <button class="hand-filter-btn active" data-hand="both"  id="hand-btn-both"  onclick="setHandPractice('both')"  title="Both Hands">L+R</button>
+                    <button class="hand-filter-btn"        data-hand="left"  id="hand-btn-left"  onclick="setHandPractice('left')"  title="Left Hand Only">L</button>
+                    <button class="hand-filter-btn"        data-hand="right" id="hand-btn-right" onclick="setHandPractice('right')" title="Right Hand Only">R</button>
+                </div>
+
+                <!-- Pitch Shift -->
+                <div class="pitch-shift-group" title="Pitch Shift (Semitones)">
+                    <button class="pitch-btn" onclick="changePitchShift(-1)" aria-label="Pitch Down">−</button>
+                    <span id="val-pitch-shift">0 st</span>
+                    <button class="pitch-btn" onclick="changePitchShift(1)" aria-label="Pitch Up">+</button>
+                </div>
+
+                <button class="ctrl-btn" id="btn-sustain" onclick="handleToggleSustain()" title="Toggle piano sustain pedal">Sustain OFF</button>
+
+                <!-- Unified MIX Control -->
+                <div class="studio-popover-wrap">
+                    <button class="studio-mix-btn" id="btn-mix-control" onclick="toggleStudioPopover('stem-mixer-popover')" aria-haspopup="true" aria-expanded="false" title="Audio MIX Controls">
+                        Mix
+                    </button>
+                    <div id="stem-mixer-popover" class="ws-stem-mixer-popover hidden" role="dialog" aria-label="MIX Audio Controls">
+                        <div class="mix-header-row">
+                            <span class="mix-title">Play along with the original</span>
+                            <span class="mix-subtitle">Blend the song's own recording under your piano.</span>
+                        </div>
+
+                        <!-- Vocals Channel (Toggle + 0–100% Slider, Default 85%) -->
+                        <div class="mix-channel-block" data-channel="vocals">
+                            <div class="mix-channel-top">
+                                <span class="mix-channel-name">Vocals</span>
+                                <label class="mix-switch">
+                                    <input type="checkbox" id="toggle-mix-vocals" onchange="handleMixToggle('vocals', this.checked)" aria-label="Toggle Vocals">
+                                    <span class="mix-switch-track"></span>
+                                </label>
+                            </div>
+                            <div class="mix-slider-row">
+                                <input type="range" id="slider-mix-vocals" class="mixer-slider" min="0" max="100" step="1" value="85" oninput="handleMixSlider('vocals', this.value)" aria-label="Vocals volume percentage">
+                                <span class="mixer-pct-val" id="pct-mix-vocals">85%</span>
+                            </div>
+                        </div>
+
+                        <!-- Backing Track Channel (Toggle Only, No Slider) -->
+                        <div class="mix-channel-block mix-channel-row-only" data-channel="instrumental">
+                            <div class="mix-channel-top">
+                                <span class="mix-channel-name">Backing track</span>
+                                <label class="mix-switch">
+                                    <input type="checkbox" id="toggle-mix-instrumental" onchange="handleMixToggle('instrumental', this.checked)" aria-label="Toggle Backing track">
+                                    <span class="mix-switch-track"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Waveform Track -->
-        <div class="ws-waveform" id="wf-wrap" onclick="handleWfClick(event)" title="Click to seek">
-            <canvas id="wf-canvas"></canvas>
-            <div id="playhead"></div>
-        </div>
-
-        <!-- Time & Seek Row -->
-        <div class="ws-transport-row">
-            <span id="cur-time" class="time-disp">0:00</span>
-            <input type="range" id="seek-bar" class="seek-bar" min="0" step="0.05" value="0" oninput="handleSeek(this.value)" aria-label="Seek">
-            <span id="dur-time" class="time-disp">0:00</span>
+        <!-- Learn Mode Transport Dock (replaces normal controls when Learn Mode active) -->
+        <div id="learn-mode-dock" class="learn-mode-dock hidden" aria-label="Learn Mode Controls">
+            <div class="learn-dock-left">
+                <button class="learn-done-btn" id="btn-learn-done" onclick="toggleLearnMode(false)">✕ Done</button>
+                <button class="ctrl-btn" id="btn-learn-prev" onclick="handleLearnPrev()" title="Previous note">&lsaquo; Prev</button>
+                <button class="play-btn" id="btn-learn-play" onclick="handleTogglePlay()" title="Play from this note">▶</button>
+                <button class="ctrl-btn" id="btn-learn-next" onclick="handleLearnNext()" title="Next note">Next &rsaquo;</button>
+                <span class="learn-step-counter" id="learn-step-counter">Note 0 of 0</span>
+                <button class="ctrl-btn" id="btn-learn-marker" onclick="handleAddLearnMarker()" title="Add rehearsal marker">+ Marker</button>
+                <div id="learn-markers-strip" class="learn-markers-strip"></div>
+            </div>
+            <div class="learn-dock-right">
+                <button class="ctrl-btn" id="btn-learn-hear" onclick="handleLearnHear()" title="Audition current note/chord">Hear it</button>
+                <button class="ctrl-btn" id="btn-learn-one-finger" onclick="handleToggleOneFinger()" aria-pressed="false" title="Simplify chords to single top melody note">One finger</button>
+                <div class="ws-hand-selector" aria-label="Learn hand filter">
+                    <button class="hand-filter-btn active" data-hand="both"  onclick="setHandPractice('both')">L+R</button>
+                    <button class="hand-filter-btn"        data-hand="left"  onclick="setHandPractice('left')">L</button>
+                    <button class="hand-filter-btn"        data-hand="right" onclick="setHandPractice('right')">R</button>
+                </div>
+            </div>
         </div>
     </footer>
 
@@ -261,17 +471,9 @@
 <!-- ══════════════════════════════════════════════
      CORE SCRIPTS
      ══════════════════════════════════════════════ -->
-<!-- Theory & Fingering Engines -->
 <script src="/js/engine/musicTheoryFormatter.js"></script>
 <script src="/js/engine/pianoFingeringEngine.js"></script>
-<script src="/js/engine/chordTransitionEngine.js"></script>
 <script src="/js/engine/currentChordEngine.js"></script>
-
-<!-- UI Components -->
-<script src="/js/ui/handDiagrams.js"></script>
-<script src="/js/ui/pianoKeyboard.js"></script>
-<script src="/js/ui/workspaceChordTimeline.js"></script>
-<script src="/js/ui/workspaceHandController.js"></script>
 
 <!-- Audio & Clock Infrastructure -->
 <script src="/js/audio/pianoPlaybackService.js"></script>
@@ -281,12 +483,15 @@
 <script src="/js/audio/playbackClock.js"></script>
 <script src="/js/audio/songAudioController.js"></script>
 
-<!-- Real-Time Pitch & Practice Feedback (Phase 11 & 12) -->
+<!-- Piano Studio Visualisers & MIX Engine -->
+<script src="/js/engine/studioTimelineAdapter.js"></script>
+<script src="/js/ui/pianoStudio2D.js"></script>
+<script src="/js/ui/pianoStudio3D.js"></script>
+<script src="/js/ui/sheetMusicStudio.js"></script>
+<script src="/js/audio/stemMixerController.js"></script>
 <script src="/js/audio/realtimePitchDetector.js"></script>
 <script src="/js/audio/realtimeInputService.js"></script>
-<script src="/js/audio/inputCalibrationService.js"></script>
-<script src="/js/audio/practiceFeedbackBridge.js"></script>
-<script src="/js/audio/practiceMetricsTracker.js"></script>
+<script src="/js/engine/learnModeController.js"></script>
 
 <script>
 'use strict';
@@ -295,32 +500,37 @@
 let DATA = null;
 let audioURL = null;
 let currentFile = null;
-let piano = null;
 let currentChordEngine = null;
 
-// Active chord dataset mode: 'simplified' | 'original'
+// Active arrangement mode: 'simplified' (Beginner) | 'original' (Intermediate)
 let activeMode = 'simplified';
 
-// Active audio playback source: 'piano' | 'original'
-let activeAudioSource = 'piano';
-
-let loopActive = false;
-let micPracticeActive = false;
-let realtimeInput = null;
-let feedbackBridge = null;
-let metricsTracker = null;
+// Active Piano Studio View: '3d' | '2d' | 'sheet'
+let activeStudioView = '3d';
+let lastPianoViewBeforeSheet = '3d';
+let studio2D = null;
+let studio3D = null;
+let sheetStudio = null;
+let colourKeyVisible = true;
 
 let analysisPollInterval = null;
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 window.onload = () => {
-    piano = new PianoKeyboard('piano-keyboard');
-    window.piano = piano;
-
     PlaybackClock.subscribe(snap => updateClockUI(snap));
 
     document.addEventListener('keydown', e => {
-        if (e.code === 'Space' && DATA) { e.preventDefault(); handleTogglePlay(); }
+        if (e.code === 'Space' && DATA && document.activeElement?.tagName !== 'INPUT') {
+            e.preventDefault();
+            handleTogglePlay();
+        }
+    });
+
+    // Close popovers when clicking outside
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.studio-popover-wrap')) {
+            document.querySelectorAll('.studio-dropdown-card, .ws-stem-mixer-popover, .speed-menu-popover').forEach(el => el.classList.add('hidden'));
+        }
     });
 
     document.getElementById('file-input').onchange = e => {
@@ -363,23 +573,9 @@ window.onload = () => {
         });
     }
 
-    const wfWrap = document.getElementById('wf-wrap');
-    if (wfWrap && typeof ResizeObserver !== 'undefined') {
-        const wfObserver = new ResizeObserver(() => {
-            if (audioURL && DATA) {
-                renderWaveform();
-            }
-        });
-        wfObserver.observe(wfWrap);
-    } else {
-        window.addEventListener('resize', () => {
-            if (audioURL && DATA) {
-                renderWaveform();
-            }
-        });
-    }
+    // Load 10-Song Library on startup
+    refreshSongLibrary();
 };
-
 
 // ─── Screen routing ───────────────────────────────────────────────────────────
 function showScreen(id) {
@@ -388,6 +584,295 @@ function showScreen(id) {
     if (target) target.classList.add('active');
     const ws = document.getElementById('workspace');
     if (ws) ws.classList.toggle('hidden', id !== 'workspace');
+}
+
+// ─── 10-Song Library Management ───────────────────────────────────────────────
+let _librarySongs = [];
+let _libraryFolders = [];
+let _libraryFilter = 'all';
+let _pendingDeleteSongId = null;
+
+async function refreshSongLibrary() {
+    try {
+        const resp = await fetch('/library');
+        if (!resp.ok) return;
+        const payload = await resp.json();
+        _librarySongs = payload.songs || [];
+        _libraryFolders = payload.folders || [];
+        _populateLibraryFolderFilter();
+        renderFilteredLibrary();
+    } catch (e) {
+        console.warn('[Library] Could not load library:', e);
+    }
+}
+
+function _populateLibraryFolderFilter() {
+    const sel = document.getElementById('lib-folder-filter');
+    if (!sel) return;
+    const prev = sel.value || 'all';
+    const opts = ['<option value="all">All Folders</option>', '<option value="Unsorted">Unsorted</option>']
+        .concat(_libraryFolders.map(f => {
+            const safe = String(f).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            return `<option value="${safe}">${safe}</option>`;
+        }));
+    sel.innerHTML = opts.join('');
+    if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+function setLibraryFilter(filter) {
+    _libraryFilter = filter || 'all';
+    document.querySelectorAll('.lib-filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.filter === _libraryFilter);
+    });
+    renderFilteredLibrary();
+}
+
+function renderFilteredLibrary() {
+    const q = (document.getElementById('lib-search-input')?.value || '').trim().toLowerCase();
+    const folder = document.getElementById('lib-folder-filter')?.value || 'all';
+    const sortBy = document.getElementById('lib-sort-select')?.value || 'newest';
+
+    let list = (_librarySongs || []).filter(song => {
+        const hasVoc = song.stems_available && song.stems_available.vocals;
+        const hasInst = song.stems_available && song.stems_available.instrumental;
+        const stemsReady = hasVoc && hasInst;
+        if (_libraryFilter === 'stems' && !stemsReady) return false;
+        if (_libraryFilter === 'nostems' && stemsReady) return false;
+        const songFolder = song.folder || 'Unsorted';
+        if (folder !== 'all' && songFolder !== folder) return false;
+        if (q) {
+            const hay = `${song.title || ''} ${song.filename || ''} ${song.key || ''}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+        }
+        return true;
+    });
+
+    if (sortBy === 'title') {
+        list = [...list].sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+    } else if (sortBy === 'tempo') {
+        list = [...list].sort((a, b) => (b.tempo || 0) - (a.tempo || 0));
+    } else {
+        list = [...list].sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    }
+
+    renderSongLibrary(list, _librarySongs.length);
+}
+
+function _formatLibDate(ts) {
+    if (!ts) return '—';
+    const d = new Date(Number(ts) * 1000);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function renderSongLibrary(songs, totalCount = songs.length) {
+    const grid = document.getElementById('library-grid');
+    const emptyCard = document.getElementById('library-empty-state');
+    const countBadge = document.getElementById('library-count-badge');
+
+    if (countBadge) countBadge.textContent = `${totalCount} / 10 Saved`;
+    if (!grid) return;
+
+    if (!songs || songs.length === 0) {
+        grid.innerHTML = '';
+        if (emptyCard) emptyCard.classList.remove('hidden');
+        return;
+    }
+
+    if (emptyCard) emptyCard.classList.add('hidden');
+
+    grid.innerHTML = songs.map(song => {
+        const hasVoc = song.stems_available && song.stems_available.vocals;
+        const hasInst = song.stems_available && song.stems_available.instrumental;
+        const stemsReady = hasVoc && hasInst;
+        const isIncomplete = song.status === 'failed' || song.status === 'incomplete' || song.analysis_available === false;
+        const keyBadge = song.key || 'C Major';
+        const bpmBadge = `${song.tempo || 120} BPM`;
+        const safeTitle = String(song.title || song.filename || 'Untitled').replace(/</g, '&lt;');
+        const createdLabel = _formatLibDate(song.created_at);
+        const accessedLabel = _formatLibDate(song.last_accessed_at || song.created_at);
+        const currentFolder = song.folder || 'Unsorted';
+        const isConfirmDelete = _pendingDeleteSongId === song.id;
+
+        const folderOptions = ['Unsorted', ..._libraryFolders].map(f => {
+            const safeF = String(f).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            return `<option value="${safeF}" ${f === currentFolder ? 'selected' : ''}>${safeF}</option>`;
+        }).join('');
+
+        return `
+        <article class="library-song-card ${isIncomplete ? 'library-card-incomplete' : ''}" role="listitem" data-song-id="${song.id}">
+            <div class="library-card-top">
+                <div class="library-artwork-badge" aria-hidden="true">
+                    <span class="artwork-note-icon">♪</span>
+                    <span class="artwork-key-text">${keyBadge.split(' ')[0]}</span>
+                </div>
+                <div class="library-card-info">
+                    <div class="library-title-row">
+                        <h3 class="library-song-title library-song-title-lg" title="${safeTitle}">${safeTitle}</h3>
+                        <button class="lib-icon-btn" onclick="handleRenameLibrarySong('${song.id}')" title="Rename song" aria-label="Rename ${safeTitle}">Rename</button>
+                    </div>
+                    <div class="library-song-meta">${keyBadge} · ${bpmBadge}</div>
+                    <div class="library-timestamps-row">
+                        <span>Created: ${createdLabel}</span>
+                        <span>Last opened: ${accessedLabel}</span>
+                    </div>
+                    ${isIncomplete ? `<div class="library-badges-row"><span class="lib-tag lib-tag--error">Processing Incomplete</span></div>` : ''}
+                </div>
+            </div>
+            <div class="library-card-folder-row">
+                <span class="lib-folder-label">Folder:</span>
+                <select class="lib-select lib-select-sm" onchange="handleMoveLibrarySong('${song.id}', this.value)" aria-label="Move ${safeTitle} to folder">
+                    ${folderOptions}
+                </select>
+            </div>
+            <div class="library-card-actions">
+                <button class="lib-btn lib-btn--primary" onclick="handleOpenLibrarySong('${song.id}')" ${isIncomplete ? 'disabled title="Analysis incomplete"' : ''}>
+                    Open in Piano Studio
+                </button>
+                ${stemsReady ? `
+                    <a class="lib-btn lib-btn--secondary" href="/library/${song.id}/stems/vocals?download=true" download>↓ Vocals</a>
+                    <a class="lib-btn lib-btn--secondary" href="/library/${song.id}/stems/instrumental?download=true" download>↓ Backing</a>
+                ` : `
+                    <button class="lib-btn lib-btn--secondary" id="lib-extract-${song.id}" onclick="handleLibraryExtractStems('${song.id}')" ${!song.audio_available ? 'disabled' : ''}>
+                        Extract Stems
+                    </button>
+                `}
+                ${isConfirmDelete ? `
+                    <button class="lib-btn lib-btn--delete confirm" onclick="confirmDeleteLibrarySong('${song.id}')">Confirm Delete</button>
+                    <button class="lib-btn lib-btn--secondary" onclick="cancelDeleteLibrarySong()">Cancel</button>
+                ` : `
+                    <button class="lib-btn lib-btn--delete" onclick="handleDeleteLibrarySong('${song.id}')" title="Remove from Library" aria-label="Remove ${safeTitle} from Library">
+                        Remove
+                    </button>
+                `}
+            </div>
+        </article>`;
+    }).join('');
+}
+
+async function handleCreateFolder() {
+    const name = window.prompt('Enter new folder name:');
+    if (!name || !name.trim()) return;
+    try {
+        const resp = await fetch('/library/folders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name.trim() })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        _setLibraryBanner(`✓ Folder "${name.trim()}" created.`);
+        await refreshSongLibrary();
+        setTimeout(() => _setLibraryBanner(''), 3000);
+    } catch (e) {
+        _setLibraryBanner(`Could not create folder: ${e.message}`, true);
+    }
+}
+
+async function handleRenameLibrarySong(songId) {
+    const song = _librarySongs.find(s => s.id === songId);
+    const nextTitle = window.prompt('Rename song:', song ? song.title : '');
+    if (!nextTitle || !nextTitle.trim()) return;
+    try {
+        const resp = await fetch(`/library/${songId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: nextTitle.trim() })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        _setLibraryBanner(`✓ Renamed to "${nextTitle.trim()}".`);
+        await refreshSongLibrary();
+        setTimeout(() => _setLibraryBanner(''), 2500);
+    } catch (e) {
+        _setLibraryBanner(`Rename failed: ${e.message}`, true);
+    }
+}
+
+async function handleMoveLibrarySong(songId, folderName) {
+    try {
+        const resp = await fetch(`/library/${songId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder: folderName })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        await refreshSongLibrary();
+    } catch (e) {
+        _setLibraryBanner(`Could not move song: ${e.message}`, true);
+    }
+}
+
+function handleDeleteLibrarySong(songId) {
+    _pendingDeleteSongId = songId;
+    renderFilteredLibrary();
+}
+
+function cancelDeleteLibrarySong() {
+    _pendingDeleteSongId = null;
+    renderFilteredLibrary();
+}
+
+async function confirmDeleteLibrarySong(songId) {
+    try {
+        const resp = await fetch(`/library/${songId}`, { method: 'DELETE' });
+        _pendingDeleteSongId = null;
+        if (resp.ok) {
+            _setLibraryBanner('Song removed from Library.');
+            await refreshSongLibrary();
+            setTimeout(() => _setLibraryBanner(''), 2500);
+        }
+    } catch (e) {
+        _setLibraryBanner(`Delete error: ${e.message}`, true);
+    }
+}
+
+function _setLibraryBanner(msg, isError = false) {
+    const banner = document.getElementById('library-status-banner');
+    if (!banner) return;
+    if (!msg) {
+        banner.classList.add('hidden');
+        banner.textContent = '';
+        return;
+    }
+    banner.textContent = msg;
+    banner.className = `library-status-banner ${isError ? 'banner-error' : 'banner-info'}`;
+}
+
+async function handleOpenLibrarySong(songId) {
+    _setLibraryBanner('Opening saved piano arrangement in Piano Studio...');
+    try {
+        const resp = await fetch(`/library/${songId}/open`, { method: 'POST' });
+        if (!resp.ok) throw new Error(`Could not open song (${resp.status})`);
+        const res = await resp.json();
+        _setLibraryBanner('');
+        DATA = res;
+        currentFile = null;
+        audioURL = res.audio_url || `/library/${songId}/audio`;
+        await initResults(res);
+    } catch (e) {
+        _setLibraryBanner(`Failed to open song: ${e.message}`, true);
+    }
+}
+
+async function handleLibraryExtractStems(songId) {
+    const btn = document.getElementById(`lib-extract-${songId}`);
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Extracting...';
+    }
+    _setLibraryBanner('Extracting Vocals and Instrumental Backing stems...');
+    try {
+        const resp = await fetch(`/library/${songId}/extract-stems`, { method: 'POST' });
+        if (!resp.ok) throw new Error(`Stem extraction failed (${resp.status})`);
+        _setLibraryBanner('✓ Vocals and Backing Track stems extracted and ready!');
+        await refreshSongLibrary();
+        setTimeout(() => _setLibraryBanner(''), 4000);
+    } catch (e) {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Retry Stems';
+        }
+        _setLibraryBanner(`Stem extraction error: ${e.message}`, true);
+    }
 }
 
 // ─── Pipeline Stage Updater ───────────────────────────────────────────────────
@@ -417,68 +902,45 @@ function _updatePipelineStageUI(pct, msg) {
     });
 }
 
-// ─── Reset / New Song ─────────────────────────────────────────────────────────
+// ─── Reset / Back to Library ──────────────────────────────────────────────────
 function resetApp() {
     if (analysisPollInterval) { clearInterval(analysisPollInterval); analysisPollInterval = null; }
 
-    if (micPracticeActive) {
-        handleToggleMicPractice();
-    }
-    if (realtimeInput) {
-        realtimeInput.stop();
-    }
-    if (feedbackBridge) {
-        feedbackBridge.detach();
-    }
-
     PlaybackClock.stop();
     PlaybackClock.clearLoop();
-    loopActive = false;
-    const loopBtn = document.getElementById('btn-4chord-loop');
-    if (loopBtn) {
-        loopBtn.classList.add('hidden');
-        loopBtn.classList.remove('btn-loop-active');
-    }
-    const trackLoopBtn = document.getElementById('btn-track-loop');
-    if (trackLoopBtn) {
-        trackLoopBtn.classList.remove('btn-loop-active');
-    }
 
     SongAudioController.stop();
     UnifiedPianoPlaybackController.stop();
     PianoPlaybackService.stopAll();
 
-    if (window.WorkspaceChordTimeline) WorkspaceChordTimeline.reset();
-    if (window.WorkspaceHandController) WorkspaceHandController.reset();
     if (currentChordEngine) { currentChordEngine.clear(); currentChordEngine = null; }
-    if (piano) { piano.voicing = null; piano.applyVoicingDOM(); }
+    if (window.LearnModeController && LearnModeController.enabled) {
+        toggleLearnMode(false);
+    }
+    toggleChordChartDrawer(false);
 
-    if (audioURL) { URL.revokeObjectURL(audioURL); audioURL = null; }
-    _waveformAudioBuffer = null;
-    DATA = null; currentFile = null;
+    if (audioURL && audioURL.startsWith('blob:')) {
+        URL.revokeObjectURL(audioURL);
+    }
+    audioURL = null;
+    DATA = null;
+    currentFile = null;
     activeMode = 'simplified';
-    activeAudioSource = 'piano';
 
     const fileInput = document.getElementById('file-input');
     if (fileInput) fileInput.value = '';
 
     document.querySelectorAll('.mode-btn').forEach(btn => {
-        const isSimp = (btn.dataset.mode === 'simplified' || btn.dataset.mode === 'simple');
+        const isSimp = (btn.dataset.mode === 'simplified');
         btn.classList.toggle('active', isSimp);
         btn.setAttribute('aria-selected', isSimp);
     });
 
-    document.querySelectorAll('.audio-src-btn').forEach(btn => {
-        const isPiano = btn.dataset.audioSrc === 'piano';
-        btn.classList.toggle('active', isPiano);
-        btn.setAttribute('aria-selected', isPiano);
-    });
-
     _updatePipelineStageUI(0, 'Waiting...');
     showScreen('upload-screen');
+    refreshSongLibrary();
 }
 
-// ─── Analysis error ───────────────────────────────────────────────────────────
 function showAnalysisError(detail) {
     if (analysisPollInterval) { clearInterval(analysisPollInterval); analysisPollInterval = null; }
     document.getElementById('prog-bar-container')?.classList.add('hidden');
@@ -496,9 +958,10 @@ function retryLastFile() {
     }
 }
 
-// ─── File handling ────────────────────────────────────────────────────────────
+// ─── File Upload & Analysis Polling ───────────────────────────────────────────
 function handleFile(file) {
-    resetApp();
+    if (analysisPollInterval) { clearInterval(analysisPollInterval); analysisPollInterval = null; }
+    PlaybackClock.stop();
     currentFile = file;
     audioURL = URL.createObjectURL(file);
 
@@ -510,7 +973,6 @@ function handleFile(file) {
     document.getElementById('prog-error-box')?.classList.add('hidden');
 
     _updatePipelineStageUI(5, 'Preparing audio...');
-
     showScreen('analysis-screen');
 
     const fd = new FormData();
@@ -544,36 +1006,35 @@ function handleFile(file) {
             .catch(() => {});
     };
 
-    if (analysisPollInterval) clearInterval(analysisPollInterval);
-    analysisPollInterval = setInterval(poll, 600);
+    analysisPollInterval = setInterval(poll, 550);
 
     fetch('/analyze', { method: 'POST', body: fd })
         .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(`Server ${r.status}: ${t}`); }); return r.json(); })
         .catch(err => showAnalysisError(`Upload failed: ${err.message}`));
 }
 
-
-// ─── initResults — called once after successful analysis ──────────────────────
+// ─── initResults — Initializes Piano Studio Workspace ─────────────────────────
 async function initResults(data) {
     if (data) DATA = data;
     try {
         if (!DATA) throw new Error('No analysis data provided');
 
-        // Build canonical SongTimeline
         const timeline = {
             duration: DATA.duration || 0,
             metadata: {
+                file: DATA.file || 'Song',
                 tempo: DATA.tempo || 120,
+                time_sig: DATA.time_sig || '4/4',
                 key: DATA.key || 'C',
                 key_full: DATA.key_full || 'C Major',
                 easy_key_full: DATA.easy_key_full || DATA.key_full || 'C Major',
-                structure: DATA.structure || null,
-                four_chord_loop: DATA.four_chord_loop || null
+                structure: DATA.structure || null
             },
+            notes: DATA.notes || (DATA.timeline && DATA.timeline.notes) || [],
+            beginnerNotes: DATA.beginner_notes || (DATA.timeline && (DATA.timeline.beginnerNotes || DATA.timeline.beginner_notes)) || [],
+            notation: DATA.notation || (DATA.timeline && DATA.timeline.notation) || null,
+            stems: DATA.stems || (DATA.timeline && DATA.timeline.stems) || {},
             sections: DATA.sections || [],
-            structure: DATA.structure || null,
-            fourChordLoop: DATA.four_chord_loop || null,
-            four_chord_loop: DATA.four_chord_loop || null,
             originalChords: (DATA.chords || []).map(c => ({
                 startTime: c.time,
                 endTime: c.end !== undefined ? c.end : c.time + 2.0,
@@ -594,126 +1055,93 @@ async function initResults(data) {
         PlaybackClock.setDuration(DATA.duration || 0);
         UnifiedPianoPlaybackController.loadTimeline(timeline);
         UnifiedPianoPlaybackController.bindClock(PlaybackClock);
+        // Disable redundant chord-block synth since StemMixerController plays the full note-level arrangement
+        UnifiedPianoPlaybackController.setEnabled(false);
 
         currentChordEngine = new CurrentChordEngine(PlaybackClock);
         currentChordEngine.loadTimeline(timeline);
         currentChordEngine.setMode('beginner');
 
-        // Mount WorkspaceChordTimeline
-        if (window.WorkspaceChordTimeline) {
-            WorkspaceChordTimeline.init({
-                prevEl:    document.getElementById('chord-prev'),
-                curEl:     document.getElementById('chord-current'),
-                nextEl:    document.getElementById('chord-next'),
-                trackEl:   document.getElementById('chord-track'),
-                viewport:  document.getElementById('chord-viewport'),
-                fillEl:    document.getElementById('chord-progress-fill'),
-                onSeek:    t => PlaybackClock.seek(t)
-            });
-            WorkspaceChordTimeline.loadChords(timeline.beginnerChords);
+        if (window.StudioTimelineAdapter) {
+            StudioTimelineAdapter.loadTimeline(timeline, DATA);
+            StudioTimelineAdapter.setMode('simplified');
+            StudioTimelineAdapter.setPitchShift(0);
+            StudioTimelineAdapter.setHandFilter('both');
+        }
+        if (window.PianoStudio2D && !studio2D) {
+            studio2D = new PianoStudio2D('studio-2d-canvas-wrap');
+        }
+        if (window.PianoStudio3D && !studio3D) {
+            studio3D = new PianoStudio3D('studio-3d-canvas-wrap');
+        }
+        if (window.SheetMusicStudio && !sheetStudio) {
+            sheetStudio = new SheetMusicStudio('studio-sheet-canvas-wrap');
         }
 
-        // Inject hand SVGs once
-        if (window.HandDiagrams) {
-            const lhEl = document.getElementById('ws-lh-svg');
-            const rhEl = document.getElementById('ws-rh-svg');
-            if (lhEl && !lhEl.querySelector('svg')) lhEl.innerHTML = HandDiagrams.getHandMarkup('LH');
-            if (rhEl && !rhEl.querySelector('svg')) rhEl.innerHTML = HandDiagrams.getHandMarkup('RH');
+        if (currentFile) {
+            SongAudioController.loadFile(currentFile).catch(err => console.warn('[Audio] Load:', err));
+        } else if (audioURL) {
+            SongAudioController.load(audioURL).catch(err => console.warn('[Audio] Load:', err));
         }
-        if (window.WorkspaceHandController) WorkspaceHandController.init();
-
-        if (currentFile) SongAudioController.loadFile(currentFile).catch(err => console.warn('[Audio] Load:', err));
-        else if (audioURL) SongAudioController.load(audioURL).catch(err => console.warn('[Audio] Load:', err));
         SongAudioController.bindClock(PlaybackClock);
 
-        // Configure Harmonic Source & Confidence display
-        const sourceEl = document.getElementById('val-source');
-        const sourceItemEl = document.getElementById('meta-source-item');
-        const confEl = document.getElementById('val-confidence');
-        const confItemEl = document.getElementById('meta-confidence-item');
-
-        if (sourceEl) {
-            let sourceText = 'Source unavailable';
-            let tooltip = 'Harmonic detection source';
-            const sel = DATA.source_selection;
-            if (sel) {
-                const inst = sel.selected_instrument || sel.selectedInstrument;
-                const src = sel.selected_source || sel.selectedSource;
-                const conf = typeof (sel.selection_confidence ?? sel.selectionConfidence) === 'number'
-                    ? Math.round((sel.selection_confidence ?? sel.selectionConfidence) * 100)
-                    : null;
-                const reason = sel.reason || '';
-
-                if (inst && inst !== 'harmonic_mix' && inst !== 'unclassified' && inst !== 'unknown') {
-                    sourceText = inst.charAt(0).toUpperCase() + inst.slice(1);
-                } else if (src) {
-                    if (src === 'original' || src === 'mix' || src === 'harmonic_mix') {
-                        sourceText = 'Original Mix';
-                    } else if (src === 'harmonic_hpss') {
-                        sourceText = 'Harmonic Separation';
-                    } else if (src === 'other') {
-                        sourceText = 'Harmonic Stem';
-                    } else {
-                        sourceText = src.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                    }
-                }
-
-                const parts = [`Detected From: ${sourceText}`];
-                if (conf !== null) parts.push(`Source Confidence: ${conf}%`);
-                if (reason) parts.push(`Reason: ${reason}`);
-                tooltip = parts.join(' | ');
-            } else if (DATA.chord_source) {
-                sourceText = DATA.chord_source.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                tooltip = `Detected From: ${sourceText}`;
+        if (window.StemMixerController) {
+            const stemsPayload = Object.assign({}, timeline.stems || {});
+            if (!stemsPayload.original && (currentFile || audioURL || (DATA && DATA.audio_url))) {
+                stemsPayload.original = currentFile || audioURL || DATA.audio_url;
             }
-
-            sourceEl.textContent = sourceText;
-            if (sourceItemEl) sourceItemEl.title = tooltip;
+            StemMixerController.loadStems(stemsPayload);
+            StemMixerController.setPitchShift(0);
+            _syncMixUIFromController();
         }
 
-        if (confEl) {
-            let confText = 'Unavailable';
-            let tooltip = 'Confidence in the detected harmony';
-            const rel = DATA.reliability;
-            if (rel && typeof rel.overall === 'number') {
-                const pct = Math.round(rel.overall * 100);
-                confText = `${pct}%`;
-                const subDetails = [];
-                if (typeof rel.harmonic_strength === 'number') subDetails.push(`Harmonic: ${Math.round(rel.harmonic_strength * 100)}%`);
-                if (typeof rel.temporal_stability === 'number') subDetails.push(`Stability: ${Math.round(rel.temporal_stability * 100)}%`);
-                if (typeof rel.beat_alignment === 'number') subDetails.push(`Beat Alignment: ${Math.round(rel.beat_alignment * 100)}%`);
-                if (subDetails.length > 0) {
-                    tooltip = `Chord Confidence: ${confText} (${subDetails.join(', ')})`;
-                } else {
-                    tooltip = `Chord Confidence: ${confText}`;
-                }
-            } else if (DATA.chords && DATA.chords.length > 0) {
-                const validChords = DATA.chords.filter(c => typeof c.confidence === 'number');
-                if (validChords.length > 0) {
-                    const avg = validChords.reduce((sum, c) => sum + c.confidence, 0) / validChords.length;
-                    confText = `${Math.round(avg * 100)}%`;
-                    tooltip = `Chord Confidence: ${confText} (Derived from chord events)`;
-                }
-            }
-            confEl.textContent = confText;
-            if (confItemEl) confItemEl.title = tooltip;
-        }
+        _updateStemDownloadStates();
 
-        // Setup 4-Chord Loop button if available
-        setup4ChordLoop(DATA.four_chord_loop);
-
-        // Set default playback audio source to Piano
-        setAudioSource('piano');
-
-        document.getElementById('dur-time').textContent = fmtTime(DATA.duration || 0);
         document.getElementById('seek-bar').max = DATA.duration || 0;
 
-        _applyModeData('simplified');
+        // Default to Beginner whenever a new cover is opened; preserve explicit session choice for same song
+        const songKey = (DATA && (DATA.song_id || DATA.file)) || '';
+        const defaultDiff = (window._hcSessionSongKey === songKey && window._hcSessionDifficulty)
+            ? window._hcSessionDifficulty
+            : 'simplified';
+        window._hcSessionSongKey = songKey;
+
+        const savedView = _getPref('stageView', '3d');
+        const savedCam = _getPref('cameraPreset', 'performer');
+        const savedHands = _getPref('showHands', 'true') !== 'false';
+        const savedColourKey = _getPref('showColourKey', 'true') !== 'false';
+        const savedSpeed = parseFloat(_getPref('playbackRate', '1')) || 1.0;
+
+        setMode(defaultDiff);
+        setSpeed(savedSpeed);
+        if (studio3D) {
+            studio3D.setCameraPreset(savedCam);
+            studio3D.setShowHands(savedHands);
+            studio3D.setShowColourKey(savedColourKey);
+        }
+        if (studio2D) {
+            studio2D.setShowColourKey(savedColourKey);
+        }
+        colourKeyVisible = savedColourKey;
+        _syncViewPrefButtons(savedCam, savedHands, savedColourKey);
+
+        if (window.LearnModeController && !window._hcLearnSubscribed) {
+            window._hcLearnSubscribed = true;
+            LearnModeController.subscribe(st => _syncLearnUI(st));
+        }
+        renderChordChartDrawer();
 
         showScreen('workspace');
         document.getElementById('workspace').classList.remove('hidden');
 
-        setTimeout(() => { try { renderWaveform(); } catch (e) { console.warn(e); } }, 300);
+        setStudioView(savedView);
+        setTimeout(() => {
+            try {
+                if (studio3D) studio3D.resize();
+                if (studio2D) studio2D.resize();
+                if (sheetStudio) sheetStudio.resize();
+            } catch (e) { console.warn(e); }
+        }, 100);
 
     } catch (err) {
         console.error('[HotChords] initResults failed:', err);
@@ -721,235 +1149,17 @@ async function initResults(data) {
     }
 }
 
-// ─── Playback Audio Source Switching: Piano vs Original Track ────────────────
-function setAudioSource(src) {
-    const normalized = (src === 'original') ? 'original' : 'piano';
-    activeAudioSource = normalized;
-
-    document.querySelectorAll('.audio-src-btn').forEach(btn => {
-        const isAct = btn.dataset.audioSrc === normalized;
-        btn.classList.toggle('active', isAct);
-        btn.setAttribute('aria-selected', isAct);
-    });
-
-    const isPiano = (normalized === 'piano');
-    if (window.UnifiedPianoPlaybackController) {
-        UnifiedPianoPlaybackController.setEnabled(isPiano);
-    }
-    if (window.SongAudioController) {
-        SongAudioController.setEnabled(!isPiano);
-    }
-}
-
-// ─── Loop Controls (Track Loop & 4-Chord Loop) ──────────────────────────────
-function handleToggleTrackLoop() {
-    if (!DATA) return;
-    const btn = document.getElementById('btn-track-loop');
-    const fourChordBtn = document.getElementById('btn-4chord-loop');
-    const isLooping = PlaybackClock.isLooping();
-
-    if (isLooping) {
-        PlaybackClock.clearLoop();
-        loopActive = false;
-        if (btn) btn.classList.remove('btn-loop-active');
-        if (fourChordBtn) fourChordBtn.classList.remove('btn-loop-active');
-    } else {
-        PlaybackClock.setLoop(0, DATA.duration || 0, true);
-        loopActive = true;
-        if (btn) btn.classList.add('btn-loop-active');
-        if (fourChordBtn) fourChordBtn.classList.remove('btn-loop-active');
-    }
-}
-
-// ─── 4-Chord Loop Practice ───────────────────────────────────────────────────
-function setup4ChordLoop(loopData) {
-    const btn = document.getElementById('btn-4chord-loop');
-    if (!btn) return;
-    if (loopData && loopData.available && Array.isArray(loopData.chords) && loopData.chords.length === 4) {
-        const chordStr = loopData.chords.join(' → ');
-        btn.textContent = `4-Chord Loop: ${chordStr}`;
-        btn.title = `Practice 4-Chord Loop: ${chordStr} (${fmtTime(loopData.start || 0)} – ${fmtTime(loopData.end || 0)})`;
-        btn.classList.remove('hidden');
-        btn.classList.remove('btn-loop-active');
-        btn.disabled = false;
-        loopActive = false;
-    } else {
-        btn.classList.add('hidden');
-        btn.disabled = true;
-        btn.title = 'No reliable 4-chord loop found';
-        loopActive = false;
-    }
-}
-
-function handleToggle4ChordLoop() {
-    if (!DATA || !DATA.four_chord_loop || !DATA.four_chord_loop.available) return;
-    const loop = DATA.four_chord_loop;
-    const btn = document.getElementById('btn-4chord-loop');
-    const trackLoopBtn = document.getElementById('btn-track-loop');
-    loopActive = !loopActive;
-
-    if (loopActive) {
-        const s = typeof loop.start === 'number' ? loop.start : 0;
-        const e = typeof loop.end === 'number' ? loop.end : (s + 8.0);
-        PlaybackClock.setLoop(s, e, true);
-        PlaybackClock.seek(s);
-        if (PlaybackClock.state !== 'PLAYING') {
-            handleTogglePlay();
-        }
-        if (btn) {
-            btn.classList.add('btn-loop-active');
-            const chordStr = (loop.chords || []).join(' → ');
-            btn.textContent = `Looping: ${chordStr} (${fmtTime(s)}–${fmtTime(e)})`;
-        }
-        if (trackLoopBtn) {
-            trackLoopBtn.classList.remove('btn-loop-active');
-        }
-    } else {
-        PlaybackClock.clearLoop();
-        if (btn) {
-            btn.classList.remove('btn-loop-active');
-            const chordStr = (loop.chords || []).join(' → ');
-            btn.textContent = `4-Chord Loop: ${chordStr}`;
-        }
-    }
-}
-
-// ─── Real-Time Microphone Practice Mode ───────────────────────────────────────
-async function handleToggleMicPractice() {
-    const btn = document.getElementById('btn-mic-practice');
-    const chip = document.getElementById('ws-feedback-chip');
-
-    if (micPracticeActive) {
-        micPracticeActive = false;
-        if (realtimeInput) {
-            realtimeInput.stop();
-        }
-        if (feedbackBridge) {
-            feedbackBridge.detach();
-        }
-        if (btn) {
-            btn.classList.remove('btn-mic-active');
-            btn.textContent = 'Practice: OFF';
-        }
-        if (chip) {
-            chip.className = 'ws-feedback-chip hidden';
-            chip.textContent = 'Mic OFF';
-        }
-    } else {
-        if (!realtimeInput) {
-            if (window.RealtimeInputService && typeof window.RealtimeInputService.startMicrophone === 'function') {
-                realtimeInput = window.RealtimeInputService;
-            } else if (typeof window.RealtimeInputServiceClass === 'function') {
-                realtimeInput = new window.RealtimeInputServiceClass();
-            } else if (typeof window.RealtimeInputService === 'function') {
-                realtimeInput = new window.RealtimeInputService();
-            }
-            window.realtimeInputServiceInstance = realtimeInput;
-        }
-
-        if (!feedbackBridge) {
-            if (typeof window.PracticeFeedbackBridge === 'function') {
-                feedbackBridge = new window.PracticeFeedbackBridge();
-            } else if (typeof window.PracticeFeedbackBridgeClass === 'function') {
-                feedbackBridge = new window.PracticeFeedbackBridgeClass();
-            }
-            window.practiceFeedbackBridgeInstance = feedbackBridge;
-        }
-
-        if (!metricsTracker) {
-            if (typeof window.PracticeMetricsTracker === 'function') {
-                metricsTracker = new window.PracticeMetricsTracker();
-            } else if (typeof window.PracticeMetricsTrackerClass === 'function') {
-                metricsTracker = new window.PracticeMetricsTrackerClass();
-            }
-            window.practiceMetricsTrackerInstance = metricsTracker;
-        }
-
-        if (!realtimeInput || !feedbackBridge) {
-            console.warn('[Practice] Practice services not loaded in window scope.');
-            return;
-        }
-
-        if (btn) {
-            btn.textContent = 'Connecting Mic...';
-        }
-        if (chip) {
-            chip.className = 'ws-feedback-chip feedback-listening';
-            chip.textContent = 'Requesting Mic...';
-            chip.classList.remove('hidden');
-        }
-
-        const started = await realtimeInput.startMicrophone(window.PianoPlaybackService?.audioCtx);
-        if (!started) {
-            if (btn) {
-                btn.textContent = 'Mic Denied';
-                setTimeout(() => { if (!micPracticeActive && btn) btn.textContent = 'Practice: OFF'; }, 2500);
-            }
-            if (chip) {
-                chip.className = 'ws-feedback-chip feedback-wrong';
-                chip.textContent = 'Mic Unavailable';
-                setTimeout(() => { if (!micPracticeActive && chip) chip.classList.add('hidden'); }, 2500);
-            }
-            return;
-        }
-
-        micPracticeActive = true;
-        if (btn) {
-            btn.classList.add('btn-mic-active');
-            btn.textContent = 'Practice: ON';
-        }
-
-        feedbackBridge.attach(realtimeInput, PlaybackClock, currentChordEngine);
-
-        feedbackBridge.subscribe(fb => {
-            if (!micPracticeActive || !chip) return;
-
-            const stat = fb.feedbackStatus || fb.inputStatus || 'LISTENING';
-            chip.className = 'ws-feedback-chip';
-
-            if (stat === 'MATCH') {
-                chip.classList.add('feedback-match');
-                chip.textContent = '✓ Match';
-            } else if (stat === 'PARTIAL') {
-                chip.classList.add('feedback-partial');
-                chip.textContent = 'Partial Match';
-            } else if (stat === 'WRONG_NOTES') {
-                chip.classList.add('feedback-wrong');
-                chip.textContent = 'Wrong Notes';
-            } else if (stat === 'NO_INPUT') {
-                chip.classList.add('feedback-noinput');
-                chip.textContent = 'No Input';
-            } else if (stat === 'LOW_CONFIDENCE') {
-                chip.classList.add('feedback-listening');
-                chip.textContent = 'Low Signal';
-            } else {
-                chip.classList.add('feedback-listening');
-                chip.textContent = 'Listening...';
-            }
-
-            if (metricsTracker) {
-                metricsTracker.recordEvent({
-                    eventType: stat === 'MATCH' ? 'CHORD_MATCHED' : (stat === 'PARTIAL' ? 'CHORD_PARTIAL' : (stat === 'WRONG_NOTES' ? 'WRONG_NOTES' : 'NO_INPUT')),
-                    chordName: fb.expected?.chord || 'N',
-                    time: fb.timing?.time || PlaybackClock.currentTime
-                });
-            }
-        });
-    }
-}
-
-// ─── Mode Switching: Simplified vs Original ──────────────────────────────────
+// ─── Arrangement Switching: Beginner vs Intermediate ──────────────────────────
 function setMode(newMode) {
-    const normalized = (newMode === 'simple' || newMode === 'simplified') ? 'simplified' : 'original';
-    if (normalized === activeMode && DATA) return;
+    const normalized = (newMode === 'simple' || newMode === 'simplified' || newMode === 'beginner') ? 'simplified' : 'original';
     activeMode = normalized;
+    window._hcSessionDifficulty = normalized;
 
     const ws = document.getElementById('workspace');
     if (ws) ws.dataset.mode = normalized;
 
     document.querySelectorAll('.mode-btn').forEach(btn => {
-        const btnMode = btn.dataset.mode;
-        const isActive = (btnMode === normalized) || (normalized === 'simplified' && btnMode === 'simple');
+        const isActive = (btn.dataset.mode === normalized);
         btn.classList.toggle('active', isActive);
         btn.setAttribute('aria-selected', isActive);
     });
@@ -960,13 +1170,8 @@ function setMode(newMode) {
 
 function _applyModeData(mode) {
     if (!DATA || !DATA.timeline) return;
-    const timeline = DATA.timeline;
     const isOrig = (mode === 'original');
 
-    const chords = isOrig ? timeline.originalChords : timeline.beginnerChords;
-    const pianoMode = isOrig
-        ? (window.PianoPlaybackMode ? PianoPlaybackMode.ORIGINAL_CHORDS : 'ORIGINAL_CHORDS')
-        : (window.PianoPlaybackMode ? PianoPlaybackMode.BEGINNER_CHORDS : 'BEGINNER_CHORDS');
     const keyDisplay = isOrig
         ? (DATA.key_full || 'C Major')
         : (DATA.easy_key_full || DATA.key_full || 'C Major');
@@ -975,89 +1180,359 @@ function _applyModeData(mode) {
     if (keyEl) keyEl.textContent = keyDisplay;
 
     const bpmEl = document.getElementById('val-bpm');
-    const sigEl = document.getElementById('val-sig');
     const trackEl = document.getElementById('res-file-name');
     if (bpmEl) bpmEl.textContent = Math.round(DATA.tempo || 120);
-    if (sigEl) sigEl.textContent = DATA.time_sig || '4/4';
-    if (trackEl) trackEl.textContent = DATA.file || 'Audio Track';
+    if (trackEl) trackEl.textContent = (DATA.title || (DATA.file || 'Audio Track').replace(/\.[^.]+$/, ''));
 
-    // Update WorkspaceChordTimeline instantly
-    if (window.WorkspaceChordTimeline) {
-        WorkspaceChordTimeline.loadChords(chords);
-    }
-
-    // Sync CurrentChordEngine
     if (currentChordEngine) {
         currentChordEngine.setMode(isOrig ? 'original' : 'beginner');
     }
-
-    // Switch piano playback mode
-    try {
-        UnifiedPianoPlaybackController.switchMode(pianoMode);
-    } catch (e) {
-        console.warn('[Mode] switchMode:', e);
+    if (window.StudioTimelineAdapter) {
+        StudioTimelineAdapter.setMode(isOrig ? 'original' : 'simplified');
     }
 
-    // Immediately update hands & piano at current time
-    _syncHandsAndPiano(PlaybackClock.currentTime);
+    renderChordChartDrawer();
+    if (window.LearnModeController) {
+        _syncLearnUI(LearnModeController.getState());
+    }
+    _renderActiveStudioView(PlaybackClock.currentTime);
 }
 
-function _syncHandsAndPiano(currentTime) {
-    if (!currentChordEngine || !piano) return;
-    const chordState = currentChordEngine.getState(currentTime);
-    if (chordState && chordState.currentChord) {
-        const voicing = PianoFingeringEngine.getChordVoicing(
-            chordState.currentChord.chordName || chordState.currentChord.chord,
-            chordState.currentChord.notes
-        );
-        piano.voicing = voicing;
-        piano.applyVoicingDOM();
+// ─── Unified VIEW & Sheet Controls ────────────────────────────────────────────
+function toggleStudioPopover(popoverId) {
+    const target = document.getElementById(popoverId);
+    if (!target) return;
+    const wasHidden = target.classList.contains('hidden');
+    document.querySelectorAll('.studio-dropdown-card, .ws-stem-mixer-popover, .speed-menu-popover').forEach(el => el.classList.add('hidden'));
+    if (wasHidden) target.classList.remove('hidden');
+}
 
-        if (window.WorkspaceHandController) {
-            WorkspaceHandController.update(
-                chordState.currentChord.chordName || chordState.currentChord.chord,
-                chordState.currentChord.notes,
-                voicing
-            );
+function setStudioView(viewName) {
+    if (viewName === '3d' || viewName === '2d') {
+        lastPianoViewBeforeSheet = viewName;
+    }
+    activeStudioView = (viewName === '2d' || viewName === 'sheet') ? viewName : '3d';
+    _setPref('stageView', activeStudioView);
+
+    const ws = document.getElementById('workspace');
+    if (ws) ws.dataset.studioView = activeStudioView;
+
+    document.querySelectorAll('.studio-view-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === activeStudioView);
+    });
+
+    const sheetBtn = document.getElementById('view-btn-sheet');
+    if (sheetBtn) sheetBtn.classList.toggle('active', activeStudioView === 'sheet');
+
+    const camSection = document.getElementById('camera-position-section');
+    if (camSection) camSection.classList.toggle('hidden', activeStudioView === '2d');
+
+    const stage2D = document.getElementById('studio-2d-stage');
+    const stage3D = document.getElementById('studio-3d-stage');
+    const stageSheet = document.getElementById('studio-sheet-stage');
+    const legendEl = document.getElementById('colour-key-legend');
+
+    if (stage2D) stage2D.classList.toggle('hidden', activeStudioView !== '2d');
+    if (stage3D) stage3D.classList.toggle('hidden', activeStudioView !== '3d');
+    if (stageSheet) stageSheet.classList.toggle('hidden', activeStudioView !== 'sheet');
+    if (legendEl) {
+        legendEl.classList.toggle('hidden', !colourKeyVisible || activeStudioView === 'sheet');
+    }
+
+    if (activeStudioView === '2d' && studio2D) studio2D.resize();
+    if (activeStudioView === '3d' && studio3D) studio3D.resize();
+    if (activeStudioView === 'sheet' && sheetStudio) sheetStudio.resize();
+    _renderActiveStudioView(PlaybackClock.currentTime);
+}
+
+function toggleSheetView() {
+    if (activeStudioView === 'sheet') {
+        setStudioView(lastPianoViewBeforeSheet || '3d');
+    } else {
+        setStudioView('sheet');
+    }
+}
+
+function _renderActiveStudioView(currentTime) {
+    if (activeStudioView === '2d' && studio2D) {
+        studio2D.render(currentTime);
+    } else if (activeStudioView === '3d' && studio3D) {
+        studio3D.render(currentTime);
+    } else if (activeStudioView === 'sheet' && sheetStudio) {
+        sheetStudio.render(currentTime);
+    }
+}
+
+function set3DCamera(preset) {
+    if (activeStudioView !== '3d') {
+        setStudioView('3d');
+    }
+    if (studio3D) studio3D.setCameraPreset(preset);
+    _setPref('cameraPreset', preset);
+    document.querySelectorAll('.camera-preset-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.cam === preset);
+    });
+}
+
+function toggle3DHands() {
+    if (!studio3D) return;
+    const nextState = !studio3D.showHands;
+    studio3D.setShowHands(nextState);
+    _setPref('showHands', String(nextState));
+    const btn = document.getElementById('btn-3d-hands');
+    if (btn) {
+        btn.textContent = nextState ? 'ON' : 'OFF';
+        btn.classList.toggle('active', nextState);
+        btn.setAttribute('aria-checked', String(nextState));
+    }
+}
+
+function toggleColourKeyLegend() {
+    colourKeyVisible = !colourKeyVisible;
+    _setPref('showColourKey', String(colourKeyVisible));
+    if (studio3D) studio3D.setShowColourKey(colourKeyVisible);
+    if (studio2D) studio2D.setShowColourKey(colourKeyVisible);
+
+    const btn = document.getElementById('btn-colour-key');
+    if (btn) {
+        btn.textContent = colourKeyVisible ? 'ON' : 'OFF';
+        btn.classList.toggle('active', colourKeyVisible);
+        btn.setAttribute('aria-checked', String(colourKeyVisible));
+    }
+    const legendEl = document.getElementById('colour-key-legend');
+    if (legendEl) {
+        legendEl.classList.toggle('hidden', !colourKeyVisible || activeStudioView === 'sheet');
+    }
+}
+
+function setHandPractice(hand) {
+    if (window.StudioTimelineAdapter) {
+        StudioTimelineAdapter.setHandFilter(hand);
+    }
+    document.querySelectorAll('.hand-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.hand === hand);
+    });
+    _renderActiveStudioView(PlaybackClock.currentTime);
+}
+
+function changePitchShift(delta) {
+    if (!window.StemMixerController) return;
+    const nextShift = StemMixerController.setPitchShift(StemMixerController.pitchShift + delta);
+    const el = document.getElementById('val-pitch-shift');
+    if (el) el.textContent = `${nextShift > 0 ? '+' : ''}${nextShift} st`;
+    _renderActiveStudioView(PlaybackClock.currentTime);
+}
+
+// ─── Unified MIX Controls (Vocals + Backing Track) ────────────────────────────
+function handleMixToggle(channel, enabled) {
+    if (!window.StemMixerController) return;
+    if (channel === 'instrumental') {
+        const st = StemMixerController.getState();
+        const hasInst = st.channels.instrumental && (st.channels.instrumental.decoded || st.channels.instrumental.available);
+        if (hasInst) {
+            StemMixerController.setChannelMute('instrumental', !enabled);
+        } else {
+            StemMixerController.setChannelVolume('original', 0.65);
+            StemMixerController.setChannelMute('original', !enabled);
         }
     } else {
-        if (piano.voicing !== null) {
-            piano.voicing = null;
-            piano.applyVoicingDOM();
+        StemMixerController.setChannelMute(channel, !enabled);
+    }
+    _syncMixUIFromController();
+}
+
+function handleMixSlider(channel, pctValue) {
+    if (!window.StemMixerController) return;
+    const pct = Math.max(0, Math.min(100, Math.round(Number(pctValue) || 0)));
+    const wasMuted = StemMixerController.channels[channel]?.muted;
+    StemMixerController.setChannelVolume(channel, pct / 100);
+    if (wasMuted && pct > 0) {
+        // Keep user's toggle state unless explicitly toggled on
+        StemMixerController.setChannelMute(channel, true);
+    }
+    _syncMixUIFromController();
+}
+
+function _syncMixUIFromController() {
+    if (!window.StemMixerController) return;
+    const st = StemMixerController.getState();
+
+    const voc = st.channels.vocals;
+    if (voc) {
+        const pct = Math.round((voc.volume || 0) * 100);
+        const toggle = document.getElementById('toggle-mix-vocals');
+        const slider = document.getElementById('slider-mix-vocals');
+        const pctEl = document.getElementById('pct-mix-vocals');
+        if (toggle) toggle.checked = !voc.muted;
+        if (slider && document.activeElement !== slider) slider.value = pct;
+        if (pctEl) pctEl.textContent = `${pct}%`;
+    }
+
+    const inst = st.channels.instrumental;
+    const orig = st.channels.original;
+    const instOn = Boolean(inst && !inst.muted) || Boolean((!inst || !inst.available) && orig && !orig.muted);
+    const instToggle = document.getElementById('toggle-mix-instrumental');
+    if (instToggle) instToggle.checked = instOn;
+}
+
+// ─── Stem & MIDI Downloads ────────────────────────────────────────────────────
+function _updateStemDownloadStates() {
+    const stems = (DATA && DATA.stems) || (DATA && DATA.timeline && DATA.timeline.stems) || {};
+    const hasVocals = Boolean(stems.vocals);
+    const hasInst = Boolean(stems.instrumental);
+
+    const vocBtn = document.getElementById('btn-dl-vocals');
+    const instBtn = document.getElementById('btn-dl-instrumental');
+    const extractRow = document.getElementById('studio-extract-stems-row');
+
+    if (vocBtn) {
+        vocBtn.disabled = !hasVocals;
+        vocBtn.textContent = hasVocals ? 'Download' : 'Unavailable';
+    }
+    if (instBtn) {
+        instBtn.disabled = !hasInst;
+        instBtn.textContent = hasInst ? 'Download' : 'Unavailable';
+    }
+    if (extractRow) {
+        extractRow.classList.toggle('hidden', hasVocals && hasInst);
+    }
+}
+
+async function handleExtractStemsForActiveSong() {
+    if (!DATA || !DATA.song_id) return;
+    const extractBtn = document.getElementById('btn-extract-stems-studio');
+    const fbEl = document.getElementById('download-feedback-msg');
+    if (extractBtn) {
+        extractBtn.disabled = true;
+        extractBtn.textContent = 'Extracting Stems...';
+    }
+    if (fbEl) {
+        fbEl.textContent = 'Separating vocals and backing track...';
+        fbEl.className = 'download-feedback-msg';
+    }
+
+    try {
+        const resp = await fetch(`/library/${DATA.song_id}/extract-stems`, { method: 'POST' });
+        if (!resp.ok) throw new Error(`Status ${resp.status}`);
+        const payload = await resp.json();
+        DATA.stems = payload.stems || {};
+        if (DATA.timeline) DATA.timeline.stems = DATA.stems;
+        if (window.StemMixerController) {
+            const stemsPayload = Object.assign({}, DATA.stems || {});
+            if (!stemsPayload.original && (currentFile || audioURL || (DATA && DATA.audio_url))) {
+                stemsPayload.original = currentFile || audioURL || DATA.audio_url;
+            }
+            StemMixerController.loadStems(stemsPayload);
+            _syncMixUIFromController();
         }
-        if (window.WorkspaceHandController) {
-            WorkspaceHandController.reset();
+        _updateStemDownloadStates();
+        if (fbEl) {
+            fbEl.textContent = '✓ Vocals & Instrumental stems ready for mixing and download!';
+        }
+    } catch (e) {
+        if (extractBtn) {
+            extractBtn.disabled = false;
+            extractBtn.textContent = 'Retry Stem Extraction';
+        }
+        if (fbEl) {
+            fbEl.textContent = `✗ Stem extraction failed: ${e.message}`;
+            fbEl.className = 'download-feedback-msg error';
         }
     }
 }
 
-// ─── Playback controls ────────────────────────────────────────────────────────
+async function handleDownloadStem(stemName) {
+    const stems = (DATA && DATA.stems) || {};
+    const stemUrl = stems[stemName];
+    const btn = document.getElementById(`btn-dl-${stemName}`);
+    const fbEl = document.getElementById('download-feedback-msg');
+
+    if (!stemUrl) return;
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Downloading...';
+    }
+    if (fbEl) {
+        fbEl.textContent = `Preparing ${stemName} download...`;
+        fbEl.className = 'download-feedback-msg';
+    }
+
+    try {
+        const dlUrl = stemUrl.includes('?') ? `${stemUrl}&download=true` : `${stemUrl}?download=true`;
+        const resp = await fetch(dlUrl);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const baseName = (DATA && DATA.file ? DATA.file.replace(/\.[^.]+$/, '') : 'HotChords');
+        a.href = url;
+        a.download = `${baseName}_${stemName}.wav`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '✓ Downloaded';
+            setTimeout(() => { if (btn) btn.textContent = 'Download'; }, 2500);
+        }
+        if (fbEl) {
+            fbEl.textContent = `✓ ${stemName === 'vocals' ? 'Vocals' : 'Instrumental'} downloaded successfully.`;
+        }
+    } catch (e) {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Retry';
+        }
+        if (fbEl) {
+            fbEl.textContent = `✗ Download failed: ${e.message}`;
+            fbEl.className = 'download-feedback-msg error';
+        }
+    }
+}
+
+function handleExportMidi(targetMode) {
+    if (!window.StudioTimelineAdapter) return;
+    const exportMode = targetMode || activeMode;
+    const prevMode = StudioTimelineAdapter.mode;
+    const fbEl = document.getElementById('download-feedback-msg');
+    try {
+        if (exportMode !== prevMode) {
+            StudioTimelineAdapter.setMode(exportMode);
+        }
+        const bytes = StudioTimelineAdapter.exportMidiBytes();
+        const blob = new Blob([bytes], { type: 'audio/midi' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const baseName = (DATA && (DATA.title || DATA.file) ? String(DATA.title || DATA.file).replace(/\.[^.]+$/, '') : 'HotChords_Arrangement');
+        const label = exportMode === 'original' ? 'intermediate' : 'beginner';
+        a.download = `${baseName}_${label}.mid`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        if (fbEl) {
+            fbEl.textContent = `✓ Downloaded ${a.download}`;
+            fbEl.className = 'download-feedback-msg';
+        }
+    } catch (e) {
+        if (fbEl) {
+            fbEl.textContent = `✗ MIDI export failed: ${e.message}`;
+            fbEl.className = 'download-feedback-msg error';
+        }
+    } finally {
+        if (StudioTimelineAdapter.mode !== prevMode) {
+            StudioTimelineAdapter.setMode(prevMode);
+        }
+    }
+}
+
+// ─── Transport Controls ───────────────────────────────────────────────────────
 function handleTogglePlay() {
     if (PlaybackClock.state === 'PLAYING') {
         PlaybackClock.pause();
     } else {
         PianoPlaybackService.resume();
         PlaybackClock.play();
-    }
-}
-
-function handleStop() {
-    PlaybackClock.stop();
-    if (piano) piano.applyVoicingDOM();
-    _syncHandsAndPiano(0);
-    if (window.WorkspaceChordTimeline) {
-        WorkspaceChordTimeline.update(0);
-    }
-}
-
-function handleRestart() {
-    PianoPlaybackService.resume();
-    PlaybackClock.restart();
-    if (currentChordEngine) {
-        _syncHandsAndPiano(0);
-    }
-    if (window.WorkspaceChordTimeline) {
-        WorkspaceChordTimeline.update(0);
     }
 }
 
@@ -1076,117 +1551,328 @@ function updateSustainUI(isSustain) {
     btn.classList.toggle('btn-sustain-active', isSustain);
 }
 
-function handleWfClick(e) {
-    if (DATA) handleSeek(e.offsetX / e.currentTarget.clientWidth * DATA.duration);
+function selectSpeedOption(rate) {
+    setSpeed(rate);
+    document.getElementById('speed-menu-popover')?.classList.add('hidden');
 }
 
 function setSpeed(rate) {
-    PlaybackClock.setPlaybackRate(rate);
-    document.querySelectorAll('.speed-btn').forEach(btn => btn.classList.remove('active'));
-    if (rate === 1.0)  document.getElementById('spd-100')?.classList.add('active');
-    if (rate === 0.75) document.getElementById('spd-075')?.classList.add('active');
-    if (rate === 0.5)  document.getElementById('spd-050')?.classList.add('active');
+    const r = Math.max(0.25, Math.min(1.5, Number(rate) || 1.0));
+    PlaybackClock.setPlaybackRate(r);
+    _setPref('playbackRate', String(r));
+    const label = document.getElementById('speed-trigger-label');
+    if (label) label.textContent = `${r}×`;
+    document.querySelectorAll('.speed-menu-item').forEach(btn => {
+        const isMatch = Math.abs(parseFloat(btn.dataset.rate) - r) < 0.001;
+        btn.classList.toggle('active', isMatch);
+        const chk = btn.querySelector('.speed-check');
+        if (chk) chk.textContent = isMatch ? '✓' : '';
+    });
+}
+
+// ─── Preferences Persistence Helpers ──────────────────────────────────────────
+function _getPref(key, fallback) {
+    try {
+        const v = localStorage.getItem(`hc_pref_${key}`);
+        return v !== null ? v : fallback;
+    } catch (e) { return fallback; }
+}
+
+function _setPref(key, value) {
+    try { localStorage.setItem(`hc_pref_${key}`, String(value)); } catch (e) {}
+}
+
+function _syncViewPrefButtons(cam, hands, colourKey) {
+    document.querySelectorAll('.camera-preset-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.cam === cam);
+    });
+    const handsBtn = document.getElementById('btn-3d-hands');
+    if (handsBtn) {
+        handsBtn.textContent = hands ? 'ON' : 'OFF';
+        handsBtn.classList.toggle('active', hands);
+        handsBtn.setAttribute('aria-checked', String(hands));
+    }
+    const ckBtn = document.getElementById('btn-colour-key');
+    if (ckBtn) {
+        ckBtn.textContent = colourKey ? 'ON' : 'OFF';
+        ckBtn.classList.toggle('active', colourKey);
+        ckBtn.setAttribute('aria-checked', String(colourKey));
+    }
+    const legendEl = document.getElementById('colour-key-legend');
+    if (legendEl) {
+        legendEl.classList.toggle('hidden', !colourKey || activeStudioView === 'sheet');
+    }
+}
+
+// ─── Diatonic Chord Chart Drawer ──────────────────────────────────────────────
+const CHORD_NOTES_PC = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const FLAT_TO_SHARP = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' };
+let _chordChartOpen = false;
+let _chordProgExpanded = false;
+
+function toggleChordChartDrawer(forceState) {
+    const drawer = document.getElementById('chord-chart-drawer');
+    const btn = document.getElementById('btn-chord-chart');
+    if (!drawer) return;
+    _chordChartOpen = typeof forceState === 'boolean' ? forceState : !_chordChartOpen;
+    drawer.classList.toggle('hidden', !_chordChartOpen);
+    if (btn) {
+        btn.classList.toggle('active', _chordChartOpen);
+        btn.setAttribute('aria-expanded', String(_chordChartOpen));
+    }
+    if (_chordChartOpen) {
+        renderChordChartDrawer();
+        _updateChordChartHighlight(PlaybackClock.currentTime);
+    }
+}
+
+function toggleChordProgressionList() {
+    _chordProgExpanded = !_chordProgExpanded;
+    const list = document.getElementById('chord-drawer-progression');
+    const chev = document.getElementById('chord-prog-chevron');
+    const btn = document.getElementById('btn-toggle-progression');
+    if (list) list.classList.toggle('hidden', !_chordProgExpanded);
+    if (chev) chev.textContent = _chordProgExpanded ? '▴' : '▾';
+    if (btn) btn.setAttribute('aria-expanded', String(_chordProgExpanded));
+}
+
+function _computeDiatonicTriads(keyFullStr) {
+    const raw = String(keyFullStr || 'C Major').trim();
+    const parts = raw.split(/\s+/);
+    let root = parts[0] || 'C';
+    if (FLAT_TO_SHARP[root]) root = FLAT_TO_SHARP[root];
+    const isMinor = /minor|min|m$/i.test(raw) && !/major/i.test(raw);
+    const rootIdx = Math.max(0, CHORD_NOTES_PC.indexOf(root));
+
+    const intervals = isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
+    const qualities = isMinor ? ['m', 'dim', '', 'm', 'm', '', ''] : ['', 'm', 'm', '', '', 'm', 'dim'];
+    const numerals = isMinor ? ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'] : ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+
+    return intervals.map((semi, i) => {
+        const note = CHORD_NOTES_PC[(rootIdx + semi) % 12];
+        return {
+            chord: `${note}${qualities[i]}`,
+            root: note,
+            quality: qualities[i] || 'maj',
+            roman: numerals[i]
+        };
+    });
+}
+
+function _romanForChord(chordName, diatonic, keyFullStr) {
+    const clean = String(chordName || '').replace(/:maj|:min/g, m => (m === ':min' ? 'm' : ''));
+    const hit = diatonic.find(d => d.chord === clean);
+    if (hit) return hit.roman;
+    const m = clean.match(/^([A-G][#b]?)(.*)$/);
+    if (!m) return '';
+    const note = FLAT_TO_SHARP[m[1]] || m[1];
+    const qual = m[2] || '';
+    const keyRoot = FLAT_TO_SHARP[(String(keyFullStr || 'C').split(/\s+/)[0])] || (String(keyFullStr || 'C').split(/\s+/)[0]);
+    const rootIdx = Math.max(0, CHORD_NOTES_PC.indexOf(keyRoot));
+    const noteIdx = CHORD_NOTES_PC.indexOf(note);
+    if (noteIdx < 0) return '';
+    const semi = (noteIdx - rootIdx + 12) % 12;
+    const romanMap = { 0: 'I', 1: 'bII', 2: 'II', 3: 'bIII', 4: 'III', 5: 'IV', 6: '#IV', 7: 'V', 8: 'bVI', 9: 'VI', 10: 'bVII', 11: 'VII' };
+    const r = romanMap[semi] || '';
+    return qual.startsWith('m') && !qual.startsWith('maj') ? r.toLowerCase() : r;
+}
+
+function renderChordChartDrawer() {
+    const titleEl = document.getElementById('chord-drawer-key-title');
+    const tilesEl = document.getElementById('chord-drawer-tiles');
+    const progEl = document.getElementById('chord-drawer-progression');
+    if (!tilesEl || !progEl) return;
+
+    const keyFull = DATA
+        ? (activeMode === 'original' ? (DATA.key_full || 'C Major') : (DATA.easy_key_full || DATA.key_full || 'C Major'))
+        : 'C Major';
+    if (titleEl) titleEl.textContent = `Chords in ${keyFull.replace(/\bMajor\b/, 'major').replace(/\bMinor\b/, 'minor')}`;
+
+    const diatonic = _computeDiatonicTriads(keyFull);
+    tilesEl.innerHTML = diatonic.map(d => `
+        <div class="diatonic-chord-tile" data-chord-name="${d.chord}">
+            <div class="diatonic-chord-name">${d.chord}</div>
+            <div class="diatonic-chord-roman">${d.roman}</div>
+        </div>
+    `).join('');
+
+    const chords = (window.StudioTimelineAdapter ? StudioTimelineAdapter.getChords() : [])
+        .filter(c => {
+            const nm = c.chordName || c.chord || '';
+            return nm && nm !== 'N';
+        });
+    if (chords.length === 0) {
+        progEl.innerHTML = '<div class="chord-prog-empty">No chord progression events detected.</div>';
+        return;
+    }
+
+    progEl.innerHTML = chords.map((c, idx) => {
+        const cStart = Number(c.startTime ?? c.time ?? 0);
+        const cName = c.chordName || c.chord || '—';
+        const roman = _romanForChord(cName, diatonic, keyFull);
+        return `
+            <button class="chord-prog-chip" data-prog-idx="${idx}" data-start="${cStart}" onclick="PlaybackClock.seek(${cStart})" title="Seek to ${cStart.toFixed(1)}s">
+                <span class="chord-prog-chip-name">${cName}</span>
+                ${roman ? `<span class="chord-prog-chip-roman">${roman}</span>` : ''}
+            </button>
+        `;
+    }).join('');
+}
+
+function _updateChordChartHighlight(currentTime) {
+    if (!_chordChartOpen || !window.StudioTimelineAdapter) return;
+    const chords = StudioTimelineAdapter.getChords().filter(c => {
+        const nm = c.chordName || c.chord || '';
+        return nm && nm !== 'N';
+    });
+    let activeChord = null;
+    let activeIdx = -1;
+    for (let i = 0; i < chords.length; i++) {
+        const s = Number(chords[i].startTime ?? chords[i].time ?? 0);
+        const e = Number(chords[i].endTime ?? chords[i].end ?? (s + 2.0));
+        if (currentTime >= s && currentTime < e) {
+            activeChord = chords[i].chordName || chords[i].chord || '';
+            activeIdx = i;
+            break;
+        }
+    }
+
+    const normActive = activeChord ? activeChord.replace(/:maj|:min/g, m => (m === ':min' ? 'm' : '')) : '';
+    document.querySelectorAll('.diatonic-chord-tile').forEach(tile => {
+        const match = normActive && tile.dataset.chordName === normActive;
+        tile.classList.toggle('active', Boolean(match));
+    });
+    document.querySelectorAll('.chord-prog-chip').forEach(chip => {
+        chip.classList.toggle('active', Number(chip.dataset.progIdx) === activeIdx);
+    });
+}
+
+// ─── Learn Mode Controller & UI Wiring ────────────────────────────────────────
+function _learnStorageKey() {
+    const sid = (DATA && (DATA.song_id || DATA.file)) || 'active';
+    const oneF = window.LearnModeController && LearnModeController.oneFingerMode ? '1f' : 'std';
+    return `hc_learn_step_${sid}_${activeMode}_${oneF}`;
+}
+
+function toggleLearnMode(enable) {
+    if (!window.LearnModeController) return;
+    const next = typeof enable === 'boolean' ? enable : !LearnModeController.enabled;
+
+    if (next) {
+        try {
+            const savedStep = parseInt(localStorage.getItem(_learnStorageKey()) || '0', 10);
+            if (savedStep > 1 && LearnModeController._getOnsetClusters) {
+                const clusters = LearnModeController._getOnsetClusters();
+                const target = clusters[Math.min(clusters.length - 1, savedStep - 1)];
+                if (target && target.length > 0) {
+                    PlaybackClock.seek(target[0].start);
+                }
+            }
+        } catch (e) {}
+    }
+
+    LearnModeController.setEnabled(next);
+
+    const normalBar = document.querySelector('.ws-playback-controls-bar');
+    const learnDock = document.getElementById('learn-mode-dock');
+    const hud = document.getElementById('learn-hud-banner');
+    if (normalBar) normalBar.classList.toggle('hidden', next);
+    if (learnDock) learnDock.classList.toggle('hidden', !next);
+    if (hud) hud.classList.toggle('hidden', !next);
+
+    _syncLearnUI(LearnModeController.getState());
+    _renderActiveStudioView(PlaybackClock.currentTime);
+}
+
+function handleLearnPrev() {
+    if (!window.LearnModeController) return;
+    LearnModeController.stepPrevNote();
+    _renderActiveStudioView(PlaybackClock.currentTime);
+}
+
+function handleLearnNext() {
+    if (!window.LearnModeController) return;
+    LearnModeController.stepNextNote();
+    _renderActiveStudioView(PlaybackClock.currentTime);
+}
+
+function handleLearnHear() {
+    if (!window.LearnModeController) return;
+    PianoPlaybackService.resume();
+    LearnModeController.hearCurrentNote();
+}
+
+function handleToggleOneFinger() {
+    if (!window.LearnModeController) return;
+    const next = !LearnModeController.oneFingerMode;
+    LearnModeController.setOneFingerMode(next);
+    const btn = document.getElementById('btn-learn-one-finger');
+    if (btn) {
+        btn.classList.toggle('active', next);
+        btn.setAttribute('aria-pressed', String(next));
+    }
+    _renderActiveStudioView(PlaybackClock.currentTime);
+}
+
+function handleAddLearnMarker() {
+    if (!window.LearnModeController) return;
+    LearnModeController.addMarker(PlaybackClock.currentTime);
+}
+
+function _syncLearnUI(st) {
+    if (!st) return;
+    if (st.enabled && st.currentStepIndex > 0) {
+        try { localStorage.setItem(_learnStorageKey(), String(st.currentStepIndex)); } catch (e) {}
+    }
+
+    const counterEl = document.getElementById('learn-step-counter');
+    if (counterEl) counterEl.textContent = `Note ${st.currentStepIndex} of ${st.totalSteps}`;
+
+    const statusEl = document.getElementById('learn-hud-status');
+    const calloutEl = document.getElementById('learn-hud-callout');
+    const streakEl = document.getElementById('learn-hud-streak');
+    const hud = document.getElementById('learn-hud-banner');
+    const fb = st.feedback || st.lastFeedback || {};
+
+    if (statusEl) {
+        statusEl.textContent = fb.status || 'READY';
+        statusEl.className = `learn-hud-status-pill status-${String(fb.status || 'waiting').toLowerCase()}`;
+    }
+    if (calloutEl) calloutEl.textContent = fb.callout || fb.message || 'Press the glowing key';
+    if (streakEl) streakEl.textContent = `Streak: ${st.stats ? st.stats.streak : 0}`;
+    if (hud) {
+        hud.classList.toggle('feedback-correct', fb.status === 'CORRECT');
+        hud.classList.toggle('feedback-wrong', fb.status === 'WRONG');
+    }
+
+    const oneFBtn = document.getElementById('btn-learn-one-finger');
+    if (oneFBtn) {
+        oneFBtn.classList.toggle('active', Boolean(st.oneFingerMode));
+        oneFBtn.setAttribute('aria-pressed', String(Boolean(st.oneFingerMode)));
+    }
+
+    const markersStrip = document.getElementById('learn-markers-strip');
+    if (markersStrip && Array.isArray(st.markers)) {
+        markersStrip.innerHTML = st.markers.map(m =>
+            `<button class="learn-marker-chip" onclick="LearnModeController.jumpToMarker(${m.id})" title="Jump to ${m.label}">${m.label}</button>`
+        ).join('');
+    }
 }
 
 // ─── Clock subscriber (rAF — runs every frame during playback) ────────────────
 function updateClockUI(snap) {
     const seekBar = document.getElementById('seek-bar');
-    const curTime = document.getElementById('cur-time');
-    const playhead = document.getElementById('playhead');
     const playIcon = document.getElementById('play-icon');
-    const trackLoopBtn = document.getElementById('btn-track-loop');
 
     if (seekBar) seekBar.value = snap.currentTime;
-    if (curTime) curTime.textContent = fmtTime(snap.currentTime);
-    if (DATA && DATA.duration > 0 && playhead) {
-        playhead.style.left = (snap.currentTime / DATA.duration * 100) + '%';
-    }
     if (playIcon) {
         playIcon.innerHTML = snap.state === 'PLAYING'
-            ? '<rect x="3.5" y="2.5" width="3.5" height="11" rx="1" fill="white"/><rect x="9" y="2.5" width="3.5" height="11" rx="1" fill="white"/>'
-            : '<path d="M4.5 2.5l8.5 5.5-8.5 5.5V2.5z" fill="white"/>';
-    }
-    if (trackLoopBtn && (!DATA?.four_chord_loop?.available || !loopActive)) {
-        trackLoopBtn.classList.toggle('btn-loop-active', snap.isLooping && (!DATA?.four_chord_loop?.available || snap.loopStart === 0));
+            ? '<rect x="3.5" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/><rect x="9" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/>'
+            : '<path d="M4.5 2.5l8.5 5.5-8.5 5.5V2.5z" fill="currentColor"/>';
     }
 
-    // Chord timeline update
-    if (window.WorkspaceChordTimeline) {
-        WorkspaceChordTimeline.update(snap.currentTime);
-    }
-
-    // Hands and piano update
-    _syncHandsAndPiano(snap.currentTime);
-}
-
-// ─── Waveform renderer ────────────────────────────────────────────────────────
-let _waveformAudioBuffer = null;
-
-function renderWaveform() {
-    try {
-        const canvas = document.getElementById('wf-canvas');
-        if (!canvas || !canvas.parentElement || !audioURL) return;
-        const W = canvas.parentElement.clientWidth, H = canvas.parentElement.clientHeight;
-        if (W <= 0 || H <= 0) return;
-
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = Math.round(W * dpr);
-        canvas.height = Math.round(H * dpr);
-        canvas.style.width = W + 'px';
-        canvas.style.height = H + 'px';
-
-        const ctx = canvas.getContext('2d');
-        ctx.scale(dpr, dpr);
-        const blue = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() || '#0071E3';
-
-        const drawData = (data) => {
-            ctx.clearRect(0, 0, W, H);
-            const step = Math.ceil(data.length / W);
-            const amp = H / 2;
-            ctx.beginPath();
-            ctx.strokeStyle = blue;
-            ctx.lineWidth = 1.5;
-            for (let i = 0; i < W; i++) {
-                let min = 1, max = -1;
-                for (let j = 0; j < step; j++) {
-                    const v = data[(i * step) + j];
-                    if (v < min) min = v;
-                    if (v > max) max = v;
-                }
-                ctx.moveTo(i, amp + min * amp * 0.9);
-                ctx.lineTo(i, amp + max * amp * 0.9);
-            }
-            ctx.stroke();
-        };
-
-        if (_waveformAudioBuffer) {
-            drawData(_waveformAudioBuffer);
-            return;
-        }
-
-        fetch(audioURL)
-            .then(r => r.arrayBuffer())
-            .then(buf => {
-                const ac = new (window.AudioContext || window.webkitAudioContext)();
-                ac.decodeAudioData(buf, decoded => {
-                    try {
-                        _waveformAudioBuffer = decoded.getChannelData(0);
-                        drawData(_waveformAudioBuffer);
-                    } finally {
-                        ac.close();
-                    }
-                }, err => console.warn('[Waveform] decodeAudioData:', err));
-            })
-            .catch(err => console.warn('[Waveform] fetch:', err));
-    } catch (e) {
-        console.warn('[Waveform] error:', e);
-    }
-}
-
-// ─── Utility ──────────────────────────────────────────────────────────────────
-function fmtTime(s) {
-    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, '0')}`;
+    _renderActiveStudioView(snap.currentTime);
+    _updateChordChartHighlight(snap.currentTime);
 }
 </script>
 </body>
