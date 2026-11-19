@@ -5,8 +5,6 @@ Delegates execution to the modularized FastAPI/Uvicorn backend.
 
 import sys
 import os
-import threading
-import uvicorn
 
 # Ensure the root project directory is in the Python search path
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -23,13 +21,6 @@ try:
 except ImportError:
     pass
 
-if __name__ == '__main__':
-    from backend.main import PORT, open_browser, print_ready_banner
-    
-    print_ready_banner(PORT)
-    
-    # Start browser auto-launch thread
-    threading.Thread(target=open_browser, args=(PORT,), daemon=True).start()
-    
-    # Start Uvicorn ASGI server
-    uvicorn.run("backend.api.router:app", host="127.0.0.1", port=PORT, log_level="warning")
+if __name__ == "__main__":
+    from backend.main import run_server
+    run_server("backend.api.router:app", log_level="warning")

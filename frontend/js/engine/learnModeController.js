@@ -50,7 +50,6 @@
             if (this.clock) {
                 this.bindClock(this.clock);
             }
-            this._initWebMIDI();
         }
 
         bindClock(clock) {
@@ -396,25 +395,6 @@
                 return m;
             }
             return null;
-        }
-
-        _initWebMIDI() {
-            if (typeof navigator !== 'undefined' && typeof navigator.requestMIDIAccess === 'function') {
-                navigator.requestMIDIAccess().then(access => {
-                    access.inputs.forEach(input => {
-                        input.onmidimessage = (msg) => {
-                            const [status, data1, data2] = msg.data || [];
-                            const cmd = status & 0xF0;
-                            if (cmd === 0x90 && data2 > 0) {
-                                if (global.PianoPlaybackService) {
-                                    global.PianoPlaybackService.playNote(data1, data2 / 127, 0.45);
-                                }
-                                this.submitUserNotes([data1]);
-                            }
-                        };
-                    });
-                }).catch(() => {});
-            }
         }
 
         subscribe(fn) {

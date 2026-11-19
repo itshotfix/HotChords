@@ -95,7 +95,7 @@ For users who prefer installing from a terminal after `v0.5.0` release assets ar
 
 ## Basic Usage
 
-1. Launch HotChords (opens `http://hotchords.localhost:<PORT>` in your browser).
+1. Launch HotChords (opens `http://127.0.0.1:<PORT>` in your browser).
 2. Drop an `MP3`, `WAV`, `FLAC`, `M4A`, or `OGG` audio file onto the upload card.
 3. Wait for local separation, transcription, and arrangement to complete.
 4. Explore your arrangement in **3D Piano** (`Performer`, `Overhead`, `Close-up`), **2D Roll**, or **Sheet** view.
