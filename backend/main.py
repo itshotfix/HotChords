@@ -7,11 +7,25 @@ import sys
 import os
 import time
 import json
+import tempfile
 import threading
 import webbrowser
 import socket
 import urllib.request
 import urllib.error
+
+# In PyInstaller --windowed builds on Windows, sys.stdout/sys.stderr can be None.
+# Redirect to a temporary runtime log so uvicorn logging and print() never fail.
+if sys.stdout is None or sys.stderr is None:
+    try:
+        _log_path = os.path.join(tempfile.gettempdir(), "hotchords_runtime.log")
+        _log_file = open(_log_path, "a", encoding="utf-8", buffering=1)
+        if sys.stdout is None:
+            sys.stdout = _log_file
+        if sys.stderr is None:
+            sys.stderr = _log_file
+    except OSError:
+        pass
 
 # Ensure workspace root is in sys.path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -76,7 +90,6 @@ def reserve_loopback_socket(
             elif hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
             sock.bind((LOOPBACK_HOST, port))
-            sock.listen(128)
             sock.set_inheritable(True)
             return port, sock
         except OSError as exc:

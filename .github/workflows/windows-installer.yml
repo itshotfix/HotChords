@@ -143,6 +143,11 @@ jobs:
             if (-not $appProcess.HasExited) {
               Stop-Process -Id $appProcess.Id -Force -ErrorAction SilentlyContinue
             }
+            $runtimeLog = Join-Path $env:TEMP "hotchords_runtime.log"
+            if (Test-Path $runtimeLog) {
+              Write-Host "=== HotChords Runtime Log ==="
+              Get-Content $runtimeLog -Tail 80
+            }
             Write-Error "Application health check failed: /health did not return ready within timeout."
             exit 1
           }
